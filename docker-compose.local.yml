@@ -1,0 +1,6 @@
+# Local standalone override — publishes the app on http://localhost:8084.
+
+services:
+  web:
+    ports:
+      - "8084:8080"

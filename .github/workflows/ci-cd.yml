@@ -1,0 +1,85 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: icds-ci-cd-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Typecheck
+        run: npx tsc -b
+
+      - name: Unit tests (report calculations)
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Shell syntax
+        run: bash -n scripts/deploy.sh scripts/ci-deploy.sh
+
+      - name: Container build and smoke test
+        run: |
+          set -euo pipefail
+          docker network create web
+          GIT_SHA="${GITHUB_SHA::12}" docker compose build
+          docker compose up -d
+          for _ in $(seq 1 30); do
+            [ "$(docker inspect --format '{{.State.Health.Status}}' icds-web)" = healthy ] && break
+            sleep 2
+          done
+          docker run --rm --network web curlimages/curl:8.10.1 -fsS http://icds-web:8080/healthz
+          docker run --rm --network web curlimages/curl:8.10.1 -fsS http://icds-web:8080/ | grep -q '<div id="root">'
+          docker run --rm --network web curlimages/curl:8.10.1 -fsSI http://icds-web:8080/ | grep -qi 'content-security-policy'
+          docker compose down
+
+  deploy:
+    name: Deploy to VPS
+    needs: verify
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: production
+      url: https://icds.educoreva.com
+    env:
+      PROD_SSH_HOST: ${{ secrets.PROD_SSH_HOST }}
+      PROD_SSH_USER: ${{ secrets.PROD_SSH_USER }}
+      PROD_SSH_PRIVATE_KEY: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+      PROD_SSH_PASSPHRASE: ${{ secrets.PROD_SSH_PASSPHRASE }}
+      # Deliberately not PROD_APP_DIR: deploy rsyncs with --delete, so it must never inherit another app's path.
+      ICDS_APP_DIR: ${{ secrets.ICDS_APP_DIR }}
+      PROD_SSH_KNOWN_HOSTS: ${{ vars.PROD_SSH_KNOWN_HOSTS }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Upload and deploy on VPS
+        run: bash scripts/ci-deploy.sh
+
+      - name: Public health check
+        continue-on-error: true
+        run: curl -fsS --retry 5 --retry-delay 5 https://icds.educoreva.com/healthz

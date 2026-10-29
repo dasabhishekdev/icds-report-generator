@@ -1,0 +1,42 @@
+# ICDS Report Generator — static web app only.
+#
+# Joins the shared Docker network `web` created by the hosting router, which owns
+# the public domain icds.educoreva.com, TLS and Cloudflare handling.
+#
+# Production (on the VPS):  bash scripts/deploy.sh
+# Local standalone:          docker network create web   # once, if the router is not running
+#                            docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
+#                            → http://localhost:8084
+
+services:
+  web:
+    container_name: icds-web
+    image: icds-report-generator:latest
+    build:
+      context: .
+      args:
+        GIT_SHA: ${GIT_SHA:-unknown}
+    expose:
+      - "8080"
+    networks:
+      web:
+        aliases: [icds-web]
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 128m
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+networks:
+  web:
+    external: true
+    name: web

@@ -1,0 +1,10 @@
+node_modules
+dist
+dev-dist
+tmp
+.git
+.github
+.playwright-mcp
+*.tsbuildinfo
+*.log
+.DS_Store
