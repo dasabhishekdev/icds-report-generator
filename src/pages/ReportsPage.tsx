@@ -217,7 +217,7 @@ export function ReportsPage() {
         <ChevronRight size={20} className="text-slate-400" />
       </Link>
 
-      <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-1 md:mx-0 md:px-0">
+      <div className="-mx-2.5 flex gap-2 overflow-x-auto px-2.5 pb-1 min-[390px]:-mx-3 min-[390px]:px-3 md:mx-0 md:px-0">
         {reports.map((r, i) => (
           <button
             key={r.id}

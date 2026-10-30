@@ -356,7 +356,7 @@ function SaveBar({ dirty, onCancel }: { dirty: boolean; onCancel: () => void }) 
     <div
       className={`mt-4 flex items-center gap-2 ${
         dirty
-          ? 'sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] z-20 rounded-2xl bg-white p-3 shadow-lg ring-1 ring-amber-200 md:bottom-4'
+          ? 'sticky bottom-3 z-20 rounded-2xl bg-white p-3 shadow-lg ring-1 ring-amber-200 md:bottom-4'
           : ''
       }`}
     >

@@ -334,7 +334,7 @@ export function AttendancePage() {
           )}
 
           {submission !== 'submitted' && allMembers.length > 0 && (
-            <div className="sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] z-20 md:bottom-4">
+            <div className="sticky bottom-3 z-20 md:bottom-4">
               <div className="flex items-center gap-3 rounded-2xl bg-white p-3 shadow-lg ring-1 ring-slate-200">
                 <div className="min-w-0 flex-1 text-sm leading-tight text-slate-600">
                   <div className="font-bold text-slate-900">

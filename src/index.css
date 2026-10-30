@@ -4,6 +4,12 @@
   --font-sans: 'Noto Sans Bengali', ui-sans-serif, system-ui, sans-serif;
 }
 
+/* The app shell scrolls its content pane, never the page, so the page must not bounce or pull. */
+html,
+body {
+  overscroll-behavior: none;
+}
+
 html {
   -webkit-tap-highlight-color: transparent;
   -webkit-text-size-adjust: 100%;

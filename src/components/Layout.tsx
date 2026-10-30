@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router';
 import { CalendarDays, Camera, ClipboardCheck, FileSpreadsheet, LogOut, Settings, Users } from 'lucide-react';
 import { useApp } from '../state/AppDataContext';
@@ -17,13 +17,17 @@ export function Layout() {
   const { t, data, user, logout } = useApp();
   const c = data.settings.center;
   const { pathname } = useLocation();
-  // A new tab opens at its top, not at the previous tab's scroll position (where it hides under the header).
+  const scroller = useRef<HTMLDivElement>(null);
+  // A new tab opens at its top, not at the previous tab's scroll position.
   useEffect(() => {
-    window.scrollTo(0, 0);
+    scroller.current?.scrollTo(0, 0);
   }, [pathname]);
+  // App shell: the window never scrolls, only the content pane does, so the header and the
+  // bottom nav stay put (no jumping with the iOS toolbar or overscroll bounce) and short pages
+  // still fill the screen.
   return (
-    <div className="min-h-dvh bg-slate-100 md:flex">
-      <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-slate-200 bg-white md:flex">
+    <div className="flex h-dvh overflow-hidden bg-slate-100">
+      <aside className="hidden h-full w-64 shrink-0 flex-col border-r border-slate-200 bg-white md:flex">
         <div className="border-b border-slate-100 px-5 py-5">
           <div className="flex items-center gap-3">
             <img src="/icon.svg" alt="" className="h-10 w-10 rounded-xl" />
@@ -69,8 +73,8 @@ export function Layout() {
         </div>
       </aside>
 
-      <div className="min-w-0 flex-1">
-        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-slate-200 bg-white/90 px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2 backdrop-blur md:hidden">
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="z-30 flex shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2 md:hidden">
           <img src="/icon.svg" alt="" className="h-8 w-8 shrink-0 rounded-lg" />
           <div className="min-w-0 leading-tight">
             <div className="text-sm font-bold text-slate-900">{t('appName')}</div>
@@ -79,32 +83,34 @@ export function Layout() {
             </div>
           </div>
         </header>
-        <main className="mx-auto max-w-5xl px-2.5 pt-3 pb-[calc(6rem+env(safe-area-inset-bottom))] min-[390px]:px-3 md:px-8 md:pt-8 md:pb-10">
-          <Outlet />
-        </main>
-      </div>
+        <div ref={scroller} className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain">
+          <main className="mx-auto min-h-full max-w-5xl px-2.5 pt-3 pb-6 min-[390px]:px-3 md:px-8 md:pt-8 md:pb-10">
+            <Outlet />
+          </main>
+        </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] md:hidden">
-        {NAV.map(({ to, label, icon: Icon }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={to === '/'}
-            className={({ isActive }) =>
-              `flex min-w-0 flex-col items-center gap-0.5 px-0.5 pt-1.5 pb-1 text-center text-[10px] leading-tight font-semibold min-[431px]:text-[11px] ${isActive ? 'text-teal-700' : 'text-slate-500'}`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                <span className={`rounded-full px-3 py-1 ${isActive ? 'bg-teal-50' : ''}`}>
-                  <Icon size={20} />
-                </span>
-                <span className="w-full truncate">{t(label)}</span>
-              </>
-            )}
-          </NavLink>
-        ))}
-      </nav>
+        <nav className="z-40 grid shrink-0 grid-cols-6 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] md:hidden">
+          {NAV.map(({ to, label, icon: Icon }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={to === '/'}
+              className={({ isActive }) =>
+                `flex min-w-0 flex-col items-center gap-0.5 px-0.5 pt-1.5 pb-1 text-center text-[10px] leading-tight font-semibold min-[431px]:text-[11px] ${isActive ? 'text-teal-700' : 'text-slate-500'}`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <span className={`rounded-full px-3 py-1 ${isActive ? 'bg-teal-50' : ''}`}>
+                    <Icon size={20} />
+                  </span>
+                  <span className="w-full truncate">{t(label)}</span>
+                </>
+              )}
+            </NavLink>
+          ))}
+        </nav>
+      </div>
     </div>
   );
 }
