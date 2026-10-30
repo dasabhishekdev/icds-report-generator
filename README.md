@@ -50,8 +50,8 @@ docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
 
 `.github/workflows/ci-cd.yml`:
 
-- **Pull requests / pushes to `main`** — install, typecheck, unit + API tests against a MongoDB service, build, then a full container-stack smoke test (health checks and a real registration through `icds-web`).
-- **Push to `main`** (or manual run) — after verification, `scripts/ci-deploy.sh` rsyncs the repo to the VPS and runs `scripts/deploy.sh`, which builds both images, waits for `icds-web`/`icds-api`/`icds-mongo` to be healthy, smoke-tests through network `web`, and rolls back both images if verification fails. MongoDB data persists in the `icds-mongo-data` volume.
+- **Pull requests, pushes to `main` and `master`** — install, typecheck, unit + API + PDF tests against a MongoDB service, build, then a full container-stack smoke test (health checks, a real registration and a generated report through `icds-web`). `main` stops here.
+- **Push to `master`** (or a manual run on `master`) deploys to production — after verification, `scripts/ci-deploy.sh` rsyncs the repo to the VPS and runs `scripts/deploy.sh`, which builds both images, waits for `icds-web`/`icds-api`/`icds-mongo` to be healthy, smoke-tests through network `web`, and rolls back both images if verification fails. MongoDB data persists in the `icds-mongo-data` volume.
 
 ### One-time setup
 
