@@ -1,7 +1,9 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { ObjectId } from 'mongodb';
-import type { BackupFile, Settings } from '../../src/db/schema';
+import type { Settings } from '../../src/db/schema';
+import type { AppData } from '../../src/domain/month';
 import type { Collections } from './db';
+import type { HolidayService } from './holidays/service';
 import {
   backupSchema,
   beneficiarySchema,
@@ -14,7 +16,7 @@ import {
   receiptSchema,
   settingsPatchSchema,
 } from './schemas';
-import { seedUser } from './seed';
+import { restoreDefaultSetup, seedUser } from './seed';
 
 const HIDDEN = { projection: { _id: 0, userId: 0 } } as const;
 const BUILT_IN_CATEGORIES = new Set(['pregnant', 'nursing']);
@@ -28,7 +30,20 @@ function param(request: FastifyRequest, name: string): string {
   return (request.params as Record<string, string>)[name];
 }
 
-export async function loadUserData(c: Collections, userId: ObjectId): Promise<Omit<BackupFile, 'app' | 'version' | 'exportedAt'>> {
+/** Last, this and next year, every year with attendance, and the years of `extraDates`. */
+function calendarYears(days: readonly { date: string }[], extraDates: readonly string[]): number[] {
+  const current = new Date().getFullYear();
+  const years = new Set([current - 1, current, current + 1]);
+  for (const d of [...days.map((x) => x.date), ...extraDates]) years.add(Number(d.slice(0, 4)));
+  return [...years].sort((a, b) => a - b);
+}
+
+export async function loadUserData(
+  c: Collections,
+  holidays: HolidayService,
+  userId: ObjectId,
+  extraDates: readonly string[] = [],
+): Promise<AppData> {
   const [settings, categories, beneficiaries, days, receipts, monthMetas] = await Promise.all([
     c.settings.findOne({ userId }, HIDDEN),
     c.categories.find({ userId }, HIDDEN).sort({ sortOrder: 1 }).toArray(),
@@ -38,7 +53,8 @@ export async function loadUserData(c: Collections, userId: ObjectId): Promise<Om
     c.monthMetas.find({ userId }, HIDDEN).toArray(),
   ]);
   if (!settings) throw new Error('Account has no settings');
-  return { settings: { ...settings, id: 'settings' } as Settings, categories, beneficiaries, days, receipts, monthMetas };
+  const holidayCalendars = await holidays.calendars(calendarYears(days, extraDates));
+  return { settings: { ...settings, id: 'settings' } as Settings, categories, beneficiaries, days, receipts, monthMetas, holidayCalendars };
 }
 
 async function wipe(c: Collections, userId: ObjectId) {
@@ -52,16 +68,27 @@ async function wipe(c: Collections, userId: ObjectId) {
   ]);
 }
 
-export function registerDataRoutes(app: FastifyInstance, c: Collections) {
+export function registerDataRoutes(app: FastifyInstance, c: Collections, holidays: HolidayService) {
   const auth = { preHandler: app.requireUser };
 
-  app.get('/api/data', auth, async (request) => loadUserData(c, uid(request)));
+  app.get('/api/data', auth, async (request) => loadUserData(c, holidays, uid(request)));
+
+  /** Re-downloads this and next year's state holiday list now; answers with the account's calendars. */
+  app.post(
+    '/api/holidays/refresh',
+    { ...auth, config: { rateLimit: { max: 5, timeWindow: '1 minute' } } },
+    async (request) => {
+      const year = new Date().getFullYear();
+      await holidays.refresh([year, year + 1]);
+      return (await loadUserData(c, holidays, uid(request))).holidayCalendars;
+    },
+  );
 
   app.patch('/api/settings', auth, async (request) => {
     const userId = uid(request);
     const patch = settingsPatchSchema.parse(request.body);
     await c.settings.updateOne({ userId }, { $set: patch });
-    return (await loadUserData(c, userId)).settings;
+    return (await loadUserData(c, holidays, userId)).settings;
   });
 
   app.put('/api/categories/:id', auth, async (request, reply) => {
@@ -139,7 +166,14 @@ export function registerDataRoutes(app: FastifyInstance, c: Collections) {
     if (backup.days.length) await c.days.insertMany(own(backup.days));
     if (backup.receipts.length) await c.receipts.insertMany(own(backup.receipts));
     if (backup.monthMetas.length) await c.monthMetas.insertMany(own(backup.monthMetas));
-    return loadUserData(c, userId);
+    return loadUserData(c, holidays, userId);
+  });
+
+  /** Restores the default rates, categories and other shared setup; every record is kept. */
+  app.post('/api/defaults', auth, async (request) => {
+    const userId = uid(request);
+    await restoreDefaultSetup(c, userId);
+    return loadUserData(c, holidays, userId);
   });
 
   /** Erases all records and restores the default injection, keeping the centre details. */
@@ -148,6 +182,6 @@ export function registerDataRoutes(app: FastifyInstance, c: Collections) {
     const current = await c.settings.findOne({ userId });
     await wipe(c, userId);
     await seedUser(c, userId, current?.center ?? {}, { language: current?.language, paperSize: current?.paperSize });
-    return loadUserData(c, userId);
+    return loadUserData(c, holidays, userId);
   });
 }

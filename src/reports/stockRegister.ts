@@ -69,7 +69,7 @@ export function buildStockRegister(summary: MonthSummary, settings: Settings): S
     const qty = holiday ? S.holidayCell : zebra({ ...S.cell, numFmt: '#,##0.##' }, i);
 
     b.set(`A${r}`, dayLabel(row, summary), cell);
-    if (holiday) b.set(`B${r}`, holidayText(row, 'short'), S.holiday);
+    if (holiday) b.mergeSet(`B${r}:Q${r}`, holidayText(row, 'short'), S.holiday);
     else b.set(`B${r}`, row.served ? mealLabel(row.meal!, false) : null, cell);
 
     const k = row.counts;
@@ -81,7 +81,7 @@ export function buildStockRegister(summary: MonthSummary, settings: Settings): S
       b.set(`O${r}`, k.mothers, bold, `C${r}+D${r}`)
         .set(`P${r}`, k.children, bold, `SUM(E${r}:N${r})`)
         .set(`Q${r}`, k.total, bold, `O${r}+P${r}`);
-    } else {
+    } else if (!holiday) {
       for (let col = 3; col <= 17; col++) b.set(addr(r, col), null, cell);
     }
 

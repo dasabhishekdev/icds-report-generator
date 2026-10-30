@@ -1,14 +1,48 @@
 import { useState } from 'react';
 import { dataApi } from '../api/data';
 import { ITEM_KEYS, MEAL_TYPES, type Category, type ItemKey, type MealType } from '../db/schema';
+import { formatMonths } from '../domain/dates';
 import { ITEM_LABEL, MEAL_LABEL } from '../lib/format';
 import { useApp } from '../state/AppDataContext';
-import { Button, Field, NumberInput, Segmented, TextInput, Toggle } from '../components/ui';
+import { Button, Field, NumberInput, Segmented, Select, TextInput, Toggle } from '../components/ui';
 
 const BUILT_IN = new Set(['pregnant', 'nursing']);
 
+/** The ICDS supplementary-nutrition age groups, in months. */
+const AGE_PRESETS: readonly [number, number][] = [
+  [0, 6],
+  [6, 36],
+  [36, 72],
+];
+const MAX_YEARS = 18;
+
+function AgeInput({ label, months, onChange }: { label: string; months: number; onChange: (months: number) => void }) {
+  const { t } = useApp();
+  const years = Math.floor(months / 12);
+  const rest = months % 12;
+  const option = (n: number) => ({ value: String(n), label: String(n) });
+  return (
+    <Field label={label}>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="flex items-center gap-2">
+          <Select
+            value={String(years)}
+            onChange={(v) => onChange(Number(v) * 12 + rest)}
+            options={Array.from({ length: MAX_YEARS + 1 }, (_, i) => option(i))}
+          />
+          <span className="text-sm text-slate-600">{t('years')}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Select value={String(rest)} onChange={(v) => onChange(years * 12 + Number(v))} options={Array.from({ length: 12 }, (_, i) => option(i))} />
+          <span className="text-sm text-slate-600">{t('months')}</span>
+        </div>
+      </div>
+    </Field>
+  );
+}
+
 export function CategoryEditor({ category, isNew, onDone }: { category: Category; isNew: boolean; onDone: () => void }) {
-  const { t, data } = useApp();
+  const { t, data, lang } = useApp();
   const [c, setC] = useState<Category>(category);
   const setNorm = (meal: MealType, item: ItemKey, v: number | undefined) =>
     setC((prev) => ({ ...prev, norms: { ...prev.norms, [meal]: { ...prev.norms[meal], [item]: v ?? 0 } } }));
@@ -22,7 +56,8 @@ export function CategoryEditor({ category, isNew, onDone }: { category: Category
         (o.minMonths ?? 0) < (c.maxMonths ?? Infinity) &&
         (c.minMonths ?? 0) < (o.maxMonths ?? Infinity),
     );
-  const valid = c.name.trim() !== '' && (c.group === 'mother' || (c.maxMonths ?? 0) > (c.minMonths ?? 0));
+  const rangeValid = c.group === 'mother' || (c.maxMonths ?? 0) > (c.minMonths ?? 0);
+  const valid = c.name.trim() !== '' && rangeValid;
 
   async function save() {
     if (await dataApi.saveCategory({ ...c, name: c.name.trim() })) onDone();
@@ -62,16 +97,33 @@ export function CategoryEditor({ category, isNew, onDone }: { category: Category
           />
         </Field>
       ) : (
-        <div className="grid grid-cols-2 gap-3">
-          <Field label={t('fromMonths')}>
-            <NumberInput value={c.minMonths} onChange={(v) => setC({ ...c, minMonths: v ?? 0 })} step="1" />
-          </Field>
-          <Field label={t('toMonths')}>
-            <NumberInput value={c.maxMonths} onChange={(v) => setC({ ...c, maxMonths: v ?? 0 })} step="1" />
-          </Field>
+        <div className="space-y-3">
+          <div className="text-sm font-medium text-slate-700">{t('ageRange')}</div>
+          <div className="flex flex-wrap gap-2">
+            {AGE_PRESETS.map(([min, max]) => {
+              const active = c.minMonths === min && c.maxMonths === max;
+              return (
+                <button
+                  key={`${min}-${max}`}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => setC({ ...c, minMonths: min, maxMonths: max })}
+                  className={`rounded-full px-3 py-1.5 text-sm font-semibold ${active ? 'bg-teal-700 text-white' : 'bg-slate-100 text-slate-700'}`}
+                >
+                  {formatMonths(min, lang)} – {formatMonths(max, lang)}
+                </button>
+              );
+            })}
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <AgeInput label={t('ageFrom')} months={c.minMonths ?? 0} onChange={(minMonths) => setC({ ...c, minMonths })} />
+            <AgeInput label={t('ageTo')} months={c.maxMonths ?? 0} onChange={(maxMonths) => setC({ ...c, maxMonths })} />
+          </div>
+          <p className="rounded-xl bg-sky-50 px-3 py-2 text-xs text-sky-900 ring-1 ring-sky-200">{t('ageRangeRule')}</p>
+          {!rangeValid && <p className="text-sm text-red-700">⚠ {t('ageRangeInvalid')}</p>}
         </div>
       )}
-      {overlaps && <p className="text-sm text-amber-700">⚠ Age range overlaps another child category.</p>}
+      {overlaps && <p className="text-sm text-amber-700">⚠ {t('ageRangeOverlap')}</p>}
       <Toggle checked={c.servesMeal} onChange={(servesMeal) => setC({ ...c, servesMeal })} label={t('servesMeal')} />
 
       {c.servesMeal && (

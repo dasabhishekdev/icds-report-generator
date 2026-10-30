@@ -13,6 +13,8 @@ export interface Config {
   /** Used when no S3 bucket is configured. */
   reportsDir: string;
   s3?: S3Config;
+  /** Download West Bengal holiday lists from the internet; otherwise only cached and built-in lists. */
+  holidaySync?: boolean;
 }
 
 const flag = (value: string | undefined, fallback: boolean) =>
@@ -40,5 +42,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
           prefix: (env.S3_PREFIX ?? 'icds').replace(/^\/+|\/+$/g, ''),
         }
       : undefined,
+    holidaySync: flag(env.HOLIDAY_SYNC, true),
   };
 }

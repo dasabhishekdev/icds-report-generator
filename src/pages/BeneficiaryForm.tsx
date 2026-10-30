@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { TriangleAlert } from 'lucide-react';
 import { dataApi, newId } from '../api/data';
-import type { Beneficiary, Gender } from '../db/schema';
-import { monthOf, todayIso } from '../domain/dates';
+import type { Beneficiary, ChildBeneficiary, Gender } from '../db/schema';
+import { monthOf, prettyDate, todayIso } from '../domain/dates';
+import { nextChildShift, resolveCategory } from '../domain/eligibility';
 import { useApp } from '../state/AppDataContext';
 import { Button, Field, Segmented, TextInput } from '../components/ui';
 
@@ -36,11 +38,39 @@ function toDraft(b: Beneficiary | undefined, kind: 'child' | 'mother'): Draft {
   if (!b) return blank;
   const common = { ...blank, kind: b.kind, name: b.name, enrolledOn: b.enrolledOn, exitedOn: b.exitedOn ?? '', notes: b.notes ?? '' };
   return b.kind === 'child'
-    ? { ...common, gender: b.gender, dob: b.dob, guardianName: b.guardianName ?? '' }
+    ? { ...common, gender: b.gender, dob: b.dob ?? '', guardianName: b.guardianName ?? '' }
     : { ...common, husbandName: b.husbandName ?? '', expectedDeliveryDate: b.expectedDeliveryDate ?? '', deliveryDate: b.deliveryDate ?? '' };
 }
 
 const opt = (s: string) => (s.trim() ? s.trim() : undefined);
+
+/** Today's category and the next automatic move, worked out from the date of birth being typed. */
+function ChildCategoryPreview({ child }: { child: ChildBeneficiary }) {
+  const { t, lang, data } = useApp();
+  const today = todayIso();
+  const { categories, settings } = data;
+  const sorted = [...categories].sort((a, b) => a.sortOrder - b.sortOrder);
+  const current = resolveCategory({ ...child, enrolledOn: today, exitedOn: undefined }, today, sorted, settings.nursingMonths);
+  const shift = nextChildShift(child, today, sorted);
+  const on = shift ? prettyDate(shift.on, lang) + ` ${shift.on.slice(0, 4)}` : '';
+  const next = shift
+    ? shift.to
+      ? lang === 'bn'
+        ? `${on} থেকে ${shift.to.name}-এ যাবে`
+        : `Moves to ${shift.to.name} on ${on}`
+      : lang === 'bn'
+        ? `${on} থেকে বয়সসীমা পেরোবে`
+        : `Ages out on ${on}`
+    : null;
+  return (
+    <div className="rounded-xl bg-teal-50 px-3 py-2 text-sm text-teal-900 ring-1 ring-teal-200">
+      <div>
+        {t('categoryToday')}: <b>{current?.name ?? t('agedOut')}</b>
+      </div>
+      {next && <div className="text-xs text-teal-800">{next}</div>}
+    </div>
+  );
+}
 
 export function BeneficiaryForm({
   existing,
@@ -55,28 +85,34 @@ export function BeneficiaryForm({
   const [d, setD] = useState<Draft>(() => toDraft(existing, initialKind));
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setD((prev) => ({ ...prev, [k]: v }));
   const hasAttendance = existing ? data.days.some((day) => day.presentIds.includes(existing.id)) : false;
-  const valid = d.name.trim() !== '' && d.enrolledOn !== '' && (d.kind === 'mother' || d.dob !== '');
+  const today = todayIso();
+  const dobInFuture = d.kind === 'child' && d.dob !== '' && d.dob > today;
+  const valid = d.name.trim() !== '' && d.enrolledOn !== '' && !dobInFuture;
 
-  async function save() {
+  function build(): Beneficiary {
     const id = existing?.id ?? newId();
     const base = { id, name: d.name.trim(), enrolledOn: d.enrolledOn, exitedOn: opt(d.exitedOn), notes: opt(d.notes) };
-    const record: Beneficiary =
-      d.kind === 'child'
-        ? { ...base, kind: 'child', gender: d.gender, dob: d.dob, guardianName: opt(d.guardianName) }
-        : {
-            ...base,
-            kind: 'mother',
-            husbandName: opt(d.husbandName),
-            expectedDeliveryDate: opt(d.expectedDeliveryDate),
-            deliveryDate: opt(d.deliveryDate),
-          };
-    if (await dataApi.saveBeneficiary(record)) onDone();
+    return d.kind === 'child'
+      ? { ...base, kind: 'child', gender: d.gender, dob: opt(d.dob), guardianName: opt(d.guardianName) }
+      : {
+          ...base,
+          kind: 'mother',
+          husbandName: opt(d.husbandName),
+          expectedDeliveryDate: opt(d.expectedDeliveryDate),
+          deliveryDate: opt(d.deliveryDate),
+        };
+  }
+
+  async function save() {
+    if (await dataApi.saveBeneficiary(build())) onDone();
   }
 
   async function remove() {
     if (!existing || !confirm(t('confirmDelete'))) return;
     if (await dataApi.deleteBeneficiary(existing.id)) onDone();
   }
+
+  const draftChild = d.kind === 'child' && d.dob && !dobInFuture ? (build() as ChildBeneficiary) : null;
 
   return (
     <form
@@ -113,8 +149,22 @@ export function BeneficiaryForm({
             />
           </Field>
           <Field label={t('dob')}>
-            <TextInput type="date" value={d.dob} onChange={(e) => set('dob', e.target.value)} required />
+            <TextInput
+              type="date"
+              value={d.dob}
+              max={today}
+              onChange={(e) => set('dob', e.target.value)}
+              className={d.dob === '' || dobInFuture ? 'ring-2 ring-amber-400' : ''}
+            />
           </Field>
+          {d.dob === '' && (
+            <div role="alert" className="flex gap-2 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-300">
+              <TriangleAlert size={18} className="mt-0.5 shrink-0" />
+              <span>{t('dobMissingForm')}</span>
+            </div>
+          )}
+          {dobInFuture && <p className="text-sm text-red-700">⚠ {t('dobInFuture')}</p>}
+          {draftChild && <ChildCategoryPreview child={draftChild} />}
           <Field label={t('guardian')}>
             <TextInput value={d.guardianName} onChange={(e) => set('guardianName', e.target.value)} />
           </Field>

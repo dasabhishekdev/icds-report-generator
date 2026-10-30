@@ -14,3 +14,15 @@ export async function seedUser(
   await c.settings.replaceOne({ userId }, { ...settings, userId }, { upsert: true });
   await c.categories.insertMany(defaultCategories().map((cat) => ({ ...cat, userId })));
 }
+
+/**
+ * Puts the shared setup (rates, categories and norms, fuel items, nursing period, weekly off,
+ * state holiday mode) back to the defaults. Beneficiaries, attendance, stock, month overrides,
+ * the centre's own holidays and saved reports are untouched.
+ */
+export async function restoreDefaultSetup(c: Collections, userId: ObjectId): Promise<void> {
+  const { rates, nursingMonths, weeklyOffDays, fuelItems } = defaultSettings();
+  await c.settings.updateOne({ userId }, { $set: { rates, nursingMonths, weeklyOffDays, fuelItems, stateHolidays: 'all' } });
+  await c.categories.deleteMany({ userId });
+  await c.categories.insertMany(defaultCategories().map((cat) => ({ ...cat, userId })));
+}

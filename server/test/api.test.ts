@@ -118,6 +118,55 @@ describe.skipIf(!MONGO_URL)('API', () => {
     expect((await call(fresh, 'GET', '/api/data')).statusCode).toBe(401);
   });
 
+  it('serves the state holiday calendar and stores holiday choices and children without a date of birth', async () => {
+    const cookie = await register('holidays@test.in');
+    const data = (await call(cookie, 'GET', '/api/data')).json();
+    const y2026 = data.holidayCalendars.find((c: { year: number }) => c.year === 2026);
+    expect(y2026?.source).toBe('built-in');
+    expect(y2026.holidays).toContainEqual({ date: '2026-10-20', name: 'Durga Puja, Maha Nabami', list: 'public' });
+
+    const patch = { stateHolidays: 'public', openOnStateHolidays: ['2026-10-20'] };
+    expect((await call(cookie, 'PATCH', '/api/settings', patch)).json()).toMatchObject(patch);
+    expect((await call(cookie, 'PATCH', '/api/settings', { stateHolidays: 'sometimes' })).statusCode).toBe(400);
+
+    const noDob = { id: 'kid-x', kind: 'child', name: 'No DOB', gender: 'F', enrolledOn: '2026-01-01' };
+    expect((await call(cookie, 'PUT', '/api/beneficiaries/kid-x', noDob)).statusCode).toBe(200);
+    expect((await call(cookie, 'GET', '/api/data')).json().beneficiaries).toEqual([noDob]);
+
+    const refreshed = await call(cookie, 'POST', '/api/holidays/refresh');
+    expect(refreshed.statusCode).toBe(200);
+    expect(Array.isArray(refreshed.json())).toBe(true);
+  });
+
+  it('loads the default setup without touching beneficiaries, attendance or the centre', async () => {
+    const cookie = await register('defaults@test.in', 'Own Centre', '42');
+    const child = { id: 'kid-d', kind: 'child', name: 'Ayan', gender: 'M', dob: '2024-01-01', enrolledOn: '2026-01-01' };
+    const day = { date: '2026-09-01', status: 'working', meal: 'rice', presentIds: ['kid-d'], updatedAt: 1 };
+    const holiday = { date: '2026-12-31', name: 'Local fair' };
+    await call(cookie, 'PUT', '/api/beneficiaries/kid-d', child);
+    await call(cookie, 'PUT', '/api/days/2026-09-01', day);
+    await call(cookie, 'PATCH', '/api/settings', {
+      rates: { egg: 9, veg: 30, potato: 30, chatu: 200 },
+      weeklyOffDays: [0, 6],
+      stateHolidays: 'off',
+      holidays: [holiday],
+    });
+    const custom = (await call(cookie, 'GET', '/api/data')).json().categories[3];
+    await call(cookie, 'PUT', `/api/categories/${custom.id}`, { ...custom, norms: { ...custom.norms, rice: { ...custom.norms.rice, rice: 999 } } });
+    await call(cookie, 'PUT', '/api/categories/extra', { ...custom, id: 'extra', name: 'Extra', minMonths: 72, maxMonths: 84, sortOrder: 9 });
+
+    const res = await call(cookie, 'POST', '/api/defaults');
+    expect(res.statusCode).toBe(200);
+    const data = res.json();
+    expect(data.settings).toMatchObject({ rates: { egg: 8.5, veg: 20, potato: 28, chatu: 167 }, weeklyOffDays: [0], stateHolidays: 'all' });
+    expect(data.settings.center).toMatchObject({ name: 'Own Centre', number: '42' });
+    expect(data.settings.holidays).toEqual([holiday]);
+    expect(data.categories.map((c: { id: string }) => c.id)).toEqual(['pregnant', 'nursing', 'child-0-6m', 'child-6m-3y', 'child-3y-6y']);
+    expect(data.categories[3].norms.rice.rice).toBe(50);
+    expect(data.beneficiaries).toEqual([child]);
+    expect(data.days).toEqual([day]);
+  });
+
   it('imports a backup, protects referenced beneficiaries and resets to defaults', async () => {
     const cookie = await register('import@test.in', 'My Centre', '9');
     const sample = sampleData();

@@ -8,6 +8,7 @@ import type {
   Settings,
   StockReceipt,
 } from '../db/schema';
+import type { HolidayCalendar } from '../domain/holidays';
 import type { AppData } from '../domain/month';
 import { api, reportError } from './http';
 
@@ -102,13 +103,34 @@ export const dataApi = {
     dataStore.set(await api<AppData>('POST', '/api/import', backup));
   },
 
+  async loadDefaults(): Promise<void> {
+    dataStore.set(await api<AppData>('POST', '/api/defaults'));
+  },
+
   async resetAll(): Promise<void> {
     dataStore.set(await api<AppData>('POST', '/api/reset'));
   },
+
+  async refreshHolidays(): Promise<void> {
+    const holidayCalendars = await api<HolidayCalendar[]>('POST', '/api/holidays/refresh');
+    const current = dataStore.get();
+    if (current) dataStore.set({ ...current, holidayCalendars });
+  },
 };
 
-export function exportBackup(d: AppData): BackupFile {
-  return { app: 'icds-report-generator', version: 1, exportedAt: new Date().toISOString(), ...d };
+/** The state holiday calendars are shared data and stay out of backups. */
+export function exportBackup({ settings, categories, beneficiaries, days, receipts, monthMetas }: AppData): BackupFile {
+  return {
+    app: 'icds-report-generator',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    settings,
+    categories,
+    beneficiaries,
+    days,
+    receipts,
+    monthMetas,
+  };
 }
 
 export const newId = () => crypto.randomUUID();

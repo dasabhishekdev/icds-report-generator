@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
-import { Baby, Plus, Search, UserRound } from 'lucide-react';
+import { Baby, Plus, Search, TriangleAlert, UserRound } from 'lucide-react';
 import type { Beneficiary } from '../db/schema';
 import { ageInMonths, formatAge, todayIso } from '../domain/dates';
-import { isEnrolledOn, resolveCategory } from '../domain/eligibility';
+import { childrenWithoutDob, isEnrolledOn, resolveCategory } from '../domain/eligibility';
 import { useApp } from '../state/AppDataContext';
 import { Button, Modal, Segmented, TextInput } from '../components/ui';
 import { BeneficiaryForm } from './BeneficiaryForm';
@@ -15,13 +15,17 @@ export function BeneficiariesPage() {
   const [filter, setFilter] = useState<Filter>('all');
   const [query, setQuery] = useState('');
   const [editing, setEditing] = useState<{ existing?: Beneficiary; kind: 'child' | 'mother' } | null>(null);
+  const [missingDobOnly, setMissingDobOnly] = useState(false);
   const today = todayIso();
+  const missingDob = useMemo(() => childrenWithoutDob(beneficiaries, today), [beneficiaries, today]);
+  const showMissingOnly = missingDobOnly && missingDob.length > 0;
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
     return beneficiaries
       .filter((b) => filter === 'all' || b.kind === filter)
       .filter((b) => !q || b.name.toLowerCase().includes(q))
+      .filter((b) => !showMissingOnly || (b.kind === 'child' && !b.dob))
       .map((b) => {
         const category = resolveCategory(b, today, categories, settings.nursingMonths);
         const enrolled = isEnrolledOn(b, today);
@@ -31,11 +35,12 @@ export function BeneficiariesPage() {
         const rank = (r: typeof x) => (r.category ? r.category.sortOrder : 99);
         return rank(x) - rank(y) || x.b.name.localeCompare(y.b.name);
       });
-  }, [beneficiaries, filter, query, categories, settings.nursingMonths, today]);
+  }, [beneficiaries, filter, query, showMissingOnly, categories, settings.nursingMonths, today]);
 
   const badge = (r: (typeof rows)[number]) => {
     if (r.b.exitedOn && today >= r.b.exitedOn) return { text: t('exited'), cls: 'bg-slate-200 text-slate-600' };
     if (!r.enrolled) return { text: t('inactive'), cls: 'bg-slate-200 text-slate-600' };
+    if (r.b.kind === 'child' && !r.b.dob) return { text: t('dobMissing'), cls: 'bg-amber-100 text-amber-900 ring-1 ring-amber-300' };
     if (!r.category) return { text: t('agedOut'), cls: 'bg-amber-100 text-amber-800' };
     if (!r.category.servesMeal) return { text: `${r.category.name} · ${t('notServed')}`, cls: 'bg-sky-100 text-sky-800' };
     return { text: r.category.name, cls: r.b.kind === 'mother' ? 'bg-rose-100 text-rose-800' : 'bg-teal-100 text-teal-800' };
@@ -56,6 +61,18 @@ export function BeneficiariesPage() {
           </Button>
         </div>
       </div>
+
+      {missingDob.length > 0 && (
+        <div role="alert" className="flex flex-wrap items-center gap-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-amber-300">
+          <TriangleAlert size={20} className="shrink-0" />
+          <span className="min-w-0 flex-1">
+            <b>{missingDob.length}</b> {t('dobMissingBanner')}
+          </span>
+          <Button className="shrink-0" onClick={() => setMissingDobOnly(!showMissingOnly)}>
+            {showMissingOnly ? t('showAll') : t('showThem')}
+          </Button>
+        </div>
+      )}
 
       <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
         <div className="relative">
@@ -82,7 +99,7 @@ export function BeneficiariesPage() {
             const bd = badge(r);
             const detail =
               b.kind === 'child'
-                ? `${b.gender === 'M' ? t('boy') : t('girl')} · ${formatAge(ageInMonths(b.dob, today), lang)}${b.guardianName ? ` · ${b.guardianName}` : ''}`
+                ? `${b.gender === 'M' ? t('boy') : t('girl')} · ${b.dob ? formatAge(ageInMonths(b.dob, today), lang) : t('dobMissing')}${b.guardianName ? ` · ${b.guardianName}` : ''}`
                 : b.deliveryDate
                   ? `${t('deliveryDate')}: ${b.deliveryDate}`
                   : b.expectedDeliveryDate

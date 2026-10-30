@@ -39,8 +39,8 @@ export function buildSnpRegister(summary: MonthSummary, settings: Settings): She
     const r = first + i;
     b.height(r, 19);
     if (row.status.kind === 'holiday') {
-      for (const col of 'ACDEFGHIJKLMO') b.set(`${col}${r}`, col === 'A' ? dayLabel(row, summary) : null, S.holidayCell);
-      b.set(`B${r}`, holidayText(row, 'short'), S.holiday).set(`N${r}`, 'ছুটি (Holiday)', S.holiday);
+      b.set(`A${r}`, dayLabel(row, summary), S.holidayCell).set(`O${r}`, null, S.holidayCell);
+      b.mergeSet(`B${r}:M${r}`, holidayText(row, 'short'), S.holiday).set(`N${r}`, 'ছুটি (Holiday)', S.holiday);
       return;
     }
     const cell = zebra(S.cell, i);

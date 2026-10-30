@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
-import { BadgeCheck, CheckCheck, ChevronLeft, ChevronRight, CircleCheck, Eraser, Pencil, Save, Send, UserPlus } from 'lucide-react';
+import { BadgeCheck, CalendarCheck, CheckCheck, ChevronLeft, ChevronRight, CircleCheck, Eraser, Pencil, Save, Send, TriangleAlert, UserPlus } from 'lucide-react';
 import { dataApi } from '../api/data';
 import { ITEM_KEYS, type Beneficiary, type DayRecord, type MealType } from '../db/schema';
 import { countPresent, dayCosts, dayRation } from '../domain/calc';
 import { addDays, ageInMonths, formatAge, prettyDate, toIso, todayIso } from '../domain/dates';
-import { eligibleOn, motherStage } from '../domain/eligibility';
+import { childrenWithoutDob, eligibleOn, motherStage } from '../domain/eligibility';
 import { resolveDayStatus, submissionState, suggestMeal } from '../domain/month';
 import { ITEM_LABEL, formatQty, rupees } from '../lib/format';
 import { useApp } from '../state/AppDataContext';
@@ -47,7 +47,7 @@ export function AttendancePage() {
   const setDate = (d: string) => setParams(d === todayIso() ? {} : { date: d }, { replace: true });
 
   const record = days.find((d) => d.date === date);
-  const status = resolveDayStatus(date, record, settings);
+  const status = resolveDayStatus(date, record, settings, data.holidayCalendars);
   const open = status.kind !== 'holiday';
   const meal: MealType = record?.meal ?? suggestMeal(date, days);
   const present = useMemo(() => new Set(record?.presentIds ?? []), [record]);
@@ -96,8 +96,11 @@ export function AttendancePage() {
   const allMembers = groups.flatMap((g) => g.members);
   /** People added later than this date are hidden here; backfilling an earlier month needs them enrolled. */
   const notYetEnrolled = beneficiaries.filter(
-    (b) => date < b.enrolledOn && (!b.exitedOn || date < b.exitedOn) && (b.kind !== 'child' || b.dob <= date),
+    (b) => date < b.enrolledOn && (!b.exitedOn || date < b.exitedOn) && (b.kind !== 'child' || (b.dob !== undefined && b.dob <= date)),
   );
+  const missingDob = childrenWithoutDob(beneficiaries, date);
+  const openOnStateHoliday = () =>
+    dataApi.saveSettings({ openOnStateHolidays: [...new Set([...(settings.openOnStateHolidays ?? []), date])].sort() });
   const enrollFromDate = async () => {
     for (const b of notYetEnrolled) await dataApi.saveBeneficiary({ ...b, enrolledOn: date });
   };
@@ -162,7 +165,18 @@ export function AttendancePage() {
             </span>
           )}
         </div>
-        {!open && (
+        {!open && status.holidaySource === 'state' && (
+          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl bg-orange-50 px-3 py-2 text-sm text-orange-900 ring-1 ring-orange-200">
+            <span className="min-w-0 flex-1">
+              <span className="mr-1 rounded-full bg-orange-200 px-2 py-0.5 text-xs font-semibold">{t('stateHolidayTag')}</span>
+              {status.label}
+            </span>
+            <Button className="shrink-0" onClick={() => void openOnStateHoliday()}>
+              <CalendarCheck size={16} /> {t('markOpen')}
+            </Button>
+          </div>
+        )}
+        {!open && status.holidaySource !== 'state' && (
           <div className="mt-3">
             <ReasonForm
               key={date}
@@ -192,6 +206,17 @@ export function AttendancePage() {
 
       {open && (
         <>
+          {missingDob.length > 0 && (
+            <div role="alert" className="flex flex-wrap items-center gap-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-amber-300">
+              <TriangleAlert size={20} className="shrink-0" />
+              <span className="min-w-0 flex-1">
+                <b>{missingDob.length}</b> {t('dobMissingBanner')} ({missingDob.map((b) => b.name).join(', ')})
+              </span>
+              <Link to="/people" className="shrink-0">
+                <Button>{t('updateDob')}</Button>
+              </Link>
+            </div>
+          )}
           {notYetEnrolled.length > 0 && (
             <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-sky-50 px-4 py-3 text-sm text-sky-900 ring-1 ring-sky-200">
               <span className="min-w-0 flex-1">
@@ -256,7 +281,7 @@ export function AttendancePage() {
                         const on = present.has(m.id);
                         const sub =
                           m.kind === 'child'
-                            ? `${m.gender === 'M' ? t('boy') : t('girl')} · ${formatAge(ageInMonths(m.dob, date), lang)}`
+                            ? `${m.gender === 'M' ? t('boy') : t('girl')}${m.dob ? ` · ${formatAge(ageInMonths(m.dob, date), lang)}` : ''}`
                             : motherStage(m, date, settings.nursingMonths) === 'nursing'
                               ? t('nursing')
                               : t('pregnant');

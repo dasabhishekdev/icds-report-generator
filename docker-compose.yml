@@ -54,6 +54,7 @@ services:
       MONGO_URL: mongodb://${MONGO_ROOT_USER:-icds}:${MONGO_ROOT_PASSWORD:?Set MONGO_ROOT_PASSWORD in .env}@icds-mongo:27017/icds?authSource=admin
       COOKIE_SECURE: ${COOKIE_SECURE:-true}
       ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-true}
+      HOLIDAY_SYNC: ${HOLIDAY_SYNC:-true}
       # Report storage: S3 when S3_BUCKET is set, otherwise the icds-reports-data volume.
       S3_BUCKET: ${S3_BUCKET:-}
       S3_REGION: ${S3_REGION:-ap-south-1}
@@ -71,7 +72,7 @@ services:
     networks:
       internal:
         aliases: [icds-api]
-      # Outbound internet for S3 only; nothing is published on this network.
+      # Outbound internet for S3 and the holiday feeds only; nothing is published on this network.
       egress: {}
     depends_on:
       mongo:

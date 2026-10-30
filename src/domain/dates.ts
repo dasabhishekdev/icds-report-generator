@@ -84,6 +84,35 @@ export function ageInMonths(dob: string, date: string): number {
   return months;
 }
 
+/**
+ * Completed months for age-group rules (categories, register bands). The anniversary itself still
+ * counts in the younger group: a child born 2023-01-15 is 35 months on 2026-01-15 and 36 on 2026-01-16,
+ * i.e. moves from "6 months – 3 years" to "3 – 6 years" at 3 years + 1 day. -1 before birth.
+ */
+export function ageGroupMonths(dob: string, date: string): number {
+  if (date < dob) return -1;
+  return Math.max(0, ageInMonths(dob, addDays(date, -1)));
+}
+
+/** First date on which `ageGroupMonths` reaches `months`. */
+export function dateReachingAgeGroup(dob: string, months: number): string {
+  let date = addMonths(dob, months);
+  while (ageGroupMonths(dob, date) < months) date = addDays(date, 1);
+  return date;
+}
+
+/** An age in whole months as words, e.g. "6 months", "3 years", "1 year 6 months". */
+export function formatMonths(months: number, lang: 'bn' | 'en'): string {
+  const y = Math.floor(months / 12);
+  const m = months % 12;
+  if (lang === 'bn') {
+    const parts = [y > 0 ? `${y} বছর` : '', m > 0 || y === 0 ? `${m} মাস` : ''];
+    return parts.filter(Boolean).join(' ');
+  }
+  const unit = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+  return [y > 0 ? unit(y, 'year') : '', m > 0 || y === 0 ? unit(m, 'month') : ''].filter(Boolean).join(' ');
+}
+
 export function formatAge(months: number, lang: 'bn' | 'en'): string {
   if (months < 0) return '—';
   const y = Math.floor(months / 12);

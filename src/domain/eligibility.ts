@@ -1,5 +1,5 @@
-import type { Beneficiary, Category, MotherBeneficiary, MotherStage } from '../db/schema';
-import { addMonths, ageInMonths } from './dates';
+import type { Beneficiary, Category, ChildBeneficiary, MotherBeneficiary, MotherStage } from '../db/schema';
+import { addMonths, ageGroupMonths, dateReachingAgeGroup } from './dates';
 
 export function isEnrolledOn(b: Beneficiary, date: string): boolean {
   if (date < b.enrolledOn) return false;
@@ -28,19 +28,40 @@ export function resolveCategory(
       return categories.find((c) => c.group === 'mother' && c.motherStage === stage) ?? null;
     }
     case 'child': {
-      const age = ageInMonths(b.dob, date);
+      if (!b.dob) return null;
+      const age = ageGroupMonths(b.dob, date);
       if (age < 0) return null;
-      return (
-        categories.find(
-          (c) => c.group === 'child' && (c.minMonths ?? 0) <= age && age < (c.maxMonths ?? Infinity),
-        ) ?? null
-      );
+      return childCategoryForAge(age, categories);
     }
     default: {
       const never: never = b;
       throw new Error(`Unknown beneficiary ${JSON.stringify(never)}`);
     }
   }
+}
+
+function childCategoryForAge(age: number, categories: readonly Category[]): Category | null {
+  return categories.find((c) => c.group === 'child' && (c.minMonths ?? 0) <= age && age < (c.maxMonths ?? Infinity)) ?? null;
+}
+
+/** Enrolled children whose date of birth is still missing; they cannot be placed in a category. */
+export function childrenWithoutDob(beneficiaries: readonly Beneficiary[], date: string): ChildBeneficiary[] {
+  return beneficiaries.filter((b): b is ChildBeneficiary => b.kind === 'child' && !b.dob && isEnrolledOn(b, date));
+}
+
+/** When a child next changes category (or ages out) after `date`, by the day-after-anniversary rule. */
+export function nextChildShift(
+  child: ChildBeneficiary,
+  date: string,
+  categories: readonly Category[],
+): { on: string; to: Category | null } | null {
+  if (!child.dob) return null;
+  const age = ageGroupMonths(child.dob, date);
+  if (age < 0) return null;
+  const current = childCategoryForAge(age, categories);
+  const upper = current?.maxMonths;
+  if (upper === undefined || !Number.isFinite(upper)) return null;
+  return { on: dateReachingAgeGroup(child.dob, upper), to: childCategoryForAge(upper, categories) };
 }
 
 /** Beneficiaries who can be marked present on a date, grouped in category order. */

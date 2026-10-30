@@ -8,12 +8,12 @@ import {
   type MealType,
   type Settings,
 } from '../db/schema';
-import { ageInMonths } from './dates';
+import { ageGroupMonths } from './dates';
 import { resolveCategory } from './eligibility';
 
 export const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
-/** Fixed age bands printed in the government stock register (completed months, [min, max)). */
+/** Fixed age bands printed in the government stock register (`ageGroupMonths`, [min, max)). */
 export const STOCK_AGE_BANDS = [
   { key: '7m-1y', label: '7M-1Y', min: 6, max: 12 },
   { key: '1y-2y', label: '1Y-2Y', min: 12, max: 24 },
@@ -64,7 +64,7 @@ export function countPresent(
       continue;
     }
     counts.children += 1;
-    const age = ageInMonths(b.dob, date);
+    const age = b.dob ? ageGroupMonths(b.dob, date) : -1;
     if (age < 36) counts.childUnder3 += 1;
     else counts.child3to6 += 1;
     const band = STOCK_AGE_BANDS.find((x) => x.min <= age && age < x.max);

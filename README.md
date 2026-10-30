@@ -13,6 +13,12 @@ Reports → choose **Whole month** or a **Date range** (up to 93 days), A4 or A3
 
 Generation runs on the server from the saved data: the registers are built by the same code as the on-screen preview, printed to a vector PDF by headless Chromium (Puppeteer, Bengali font embedded) and written to Excel with live formulas. Every generation is stored for the user — `<S3_PREFIX>/users/<userId>/<YYYY-MM>/<reportId>/…` in S3, or the `icds-reports-data` volume when `S3_BUCKET` is empty — and listed under **Saved reports** by month with Download, Open / Print and Delete.
 
+## Holidays and age categories
+
+West Bengal publishes its holiday list only as a yearly Finance (Audit) Department PDF, so there is no official API. The server (`server/src/holidays/`) downloads each year from a keyless iCal transcription of the notification (List-I and List-II), falls back to the India Calendar API (List-I only), caches it in the `holidayCalendars` collection, and re-checks this and next year every few hours — a new year appears automatically once it is published. The 2026 list is built in for offline use. In Settings each centre chooses all govt holidays, List-I only, or off, and can mark any state holiday "Not a holiday". Set `HOLIDAY_SYNC=false` for servers without internet.
+
+Children move between age categories from their date of birth, the day after completing the boundary age (3–6 years from 3 years + 1 day). A child without a date of birth has no category: the list, the form and the attendance page warn until it is added.
+
 ## Architecture
 
 | Part | Where | Notes |

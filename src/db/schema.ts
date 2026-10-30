@@ -26,7 +26,10 @@ export interface Category {
   group: CategoryGroup;
   /** Mother categories match on pregnancy stage. */
   motherStage?: MotherStage;
-  /** Child categories match on completed age in months: minMonths <= age < maxMonths. */
+  /**
+   * Child categories match on completed age in months: minMonths <= age < maxMonths, where a child
+   * completes N months the day after the N-month anniversary (see `ageGroupMonths`).
+   */
   minMonths?: number;
   maxMonths?: number;
   /** Beneficiaries in a category that is not served (e.g. 0-6 months) are hidden from attendance. */
@@ -47,7 +50,8 @@ interface BeneficiaryBase {
 export interface ChildBeneficiary extends BeneficiaryBase {
   kind: 'child';
   gender: Gender;
-  dob: string;
+  /** Missing until the worker records it; without it the child has no age category. */
+  dob?: string;
   guardianName?: string;
 }
 
@@ -123,6 +127,9 @@ export interface CenterInfo {
 
 export type Language = 'bn' | 'en';
 export type PaperSize = 'A4' | 'A3';
+/** Which West Bengal Government holidays close the centre: List-I and List-II, List-I only, or none. */
+export type StateHolidayMode = 'all' | 'public' | 'off';
+export const STATE_HOLIDAY_MODES: readonly StateHolidayMode[] = ['all', 'public', 'off'];
 
 export interface Settings {
   id: 'settings';
@@ -134,7 +141,12 @@ export interface Settings {
   /** 0 = Sunday … 6 = Saturday */
   weeklyOffDays: number[];
   fuelItems: FuelItem[];
+  /** The centre's own holidays; they apply on top of the state calendar. */
   holidays: Holiday[];
+  /** Absent means 'all'. */
+  stateHolidays?: StateHolidayMode;
+  /** State-calendar holidays on which this centre stays open. */
+  openOnStateHolidays?: string[];
   /** Paper for PDF, print and Excel page setup. Absent in databases created before it existed. */
   paperSize?: PaperSize;
 }

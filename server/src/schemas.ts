@@ -1,13 +1,14 @@
 import { z } from 'zod';
-import type {
-  BackupFile,
-  Beneficiary,
-  Category,
-  CenterInfo,
-  DayRecord,
-  MonthMeta,
-  Settings,
-  StockReceipt,
+import {
+  STATE_HOLIDAY_MODES,
+  type BackupFile,
+  type Beneficiary,
+  type Category,
+  type CenterInfo,
+  type DayRecord,
+  type MonthMeta,
+  type Settings,
+  type StockReceipt,
 } from '../../src/db/schema';
 
 /** Every object is strict: unknown keys (including Mongo operators such as `$set`) are rejected. */
@@ -64,7 +65,7 @@ export const beneficiarySchema = z.discriminatedUnion('kind', [
     ...beneficiaryBase,
     kind: z.literal('child'),
     gender: z.enum(['M', 'F']),
-    dob: isoDateSchema,
+    dob: isoDateSchema.optional(),
     guardianName: text(120).optional(),
   }),
   z.strictObject({
@@ -142,6 +143,8 @@ const settingsFields = {
     )
     .max(50),
   holidays: z.array(z.strictObject({ date: isoDateSchema, name: text(120).min(1) })).max(400),
+  stateHolidays: z.enum(STATE_HOLIDAY_MODES).optional(),
+  openOnStateHolidays: z.array(isoDateSchema).max(2000).optional(),
   paperSize: z.enum(['A4', 'A3']).optional(),
 };
 

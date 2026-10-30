@@ -1,5 +1,6 @@
 import { MongoClient, type Collection, type Db, type ObjectId } from 'mongodb';
 import type { Beneficiary, Category, DayRecord, MonthMeta, Settings, StockReceipt } from '../../src/db/schema';
+import type { HolidaySource, StateHoliday } from '../../src/domain/holidays';
 
 export interface UserDoc {
   _id: ObjectId;
@@ -42,6 +43,16 @@ export interface ReportDoc {
   summary: { servedDays: number; beneficiaryDays: number; purchaseTotal: number; fuelTotal: number };
 }
 
+/** A downloaded West Bengal holiday list; public data shared by all accounts. */
+export interface HolidayCalendarDoc {
+  /** `WB-<year>` */
+  _id: string;
+  year: number;
+  source: Exclude<HolidaySource, 'built-in' | 'none'>;
+  fetchedAt: Date;
+  holidays: StateHoliday[];
+}
+
 /** Every application document carries its owner; all queries filter on userId. */
 type Owned<T> = T & { userId: ObjectId };
 
@@ -55,6 +66,7 @@ export interface Collections {
   receipts: Collection<Owned<StockReceipt>>;
   monthMetas: Collection<Owned<MonthMeta>>;
   reports: Collection<ReportDoc>;
+  holidayCalendars: Collection<HolidayCalendarDoc>;
 }
 
 export function collections(db: Db): Collections {
@@ -68,6 +80,7 @@ export function collections(db: Db): Collections {
     receipts: db.collection('receipts'),
     monthMetas: db.collection('monthMetas'),
     reports: db.collection('reports'),
+    holidayCalendars: db.collection('holidayCalendars'),
   };
 }
 

@@ -1,15 +1,39 @@
 import { useRef, useState } from 'react';
-import { ChevronRight, Database, Download, KeyRound, LogOut, Plus, Trash2, Upload, UserRound } from 'lucide-react';
+import {
+  CalendarCheck,
+  CalendarX,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  KeyRound,
+  LogOut,
+  Mail,
+  Plus,
+  RefreshCw,
+  RotateCcw,
+  Trash2,
+  Upload,
+  UserRound,
+} from 'lucide-react';
 import { authApi } from '../api/auth';
 import { dataApi, exportBackup, newId } from '../api/data';
 import { emptyNorms } from '../db/defaults';
-import { sampleData } from '../db/sampleData';
-import type { BackupFile, Category, CenterInfo, FuelItem, Language, Settings } from '../db/schema';
-import { WEEKDAYS_BN, WEEKDAYS_EN, todayIso } from '../domain/dates';
+import {
+  STATE_HOLIDAY_MODES,
+  type BackupFile,
+  type Category,
+  type CenterInfo,
+  type FuelItem,
+  type Language,
+  type Settings,
+  type StateHolidayMode,
+} from '../db/schema';
+import { WEEKDAYS_BN, WEEKDAYS_EN, formatMonths, prettyDate, todayIso } from '../domain/dates';
+import { stateHolidayMode, type HolidaySource } from '../domain/holidays';
 import { downloadJson } from '../lib/download';
 import type { StringKey } from '../i18n/strings';
 import { useApp } from '../state/AppDataContext';
-import { Button, Card, Field, Flash, Modal, NumberInput, Segmented, TextInput, useFlash } from '../components/ui';
+import { Button, ButtonLink, Card, Field, Flash, Modal, NumberInput, Segmented, TextInput, useFlash } from '../components/ui';
 import { CategoryEditor } from './CategoryEditor';
 
 const saveSettings = (patch: Partial<Omit<Settings, 'id'>>) => dataApi.saveSettings(patch);
@@ -18,18 +42,19 @@ export function SettingsPage() {
   const { t, data } = useApp();
   const [flash, setFlash] = useFlash();
   const saved = (ok: boolean) => ok && setFlash(t('saved'));
-  const { center, rates, fuelItems, language, nursingMonths, weeklyOffDays } = data.settings;
+  const { center, rates, fuelItems, nursingMonths, weeklyOffDays } = data.settings;
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-bold text-slate-900">{t('navSettings')}</h1>
       <AccountCard onDone={(msg) => setFlash(msg)} />
-      <GeneralCard key={`${language}-${nursingMonths}`} onSaved={saved} />
+      <GeneralCard key={nursingMonths} onSaved={saved} />
       <CentreCard key={JSON.stringify(center)} onSaved={saved} />
       <RatesCard key={JSON.stringify(rates)} onSaved={saved} />
       <CategoriesCard />
       <HolidaysCard key={weeklyOffDays.join()} onSaved={saved} />
       <FuelItemsCard key={JSON.stringify(fuelItems)} onSaved={saved} />
       <DataCard onDone={() => setFlash(t('done'))} />
+      <ContactCard />
       <Flash message={flash} />
     </div>
   );
@@ -101,21 +126,24 @@ function AccountCard({ onDone }: { onDone: (msg: string) => void }) {
 
 function GeneralCard({ onSaved }: { onSaved: (ok: boolean) => void }) {
   const { t, data } = useApp();
-  const [language, setLanguage] = useState<Language>(data.settings.language);
   const [nursingMonths, setNursingMonths] = useState<number | undefined>(data.settings.nursingMonths);
   const valid = nursingMonths !== undefined && Number.isInteger(nursingMonths) && nursingMonths > 0;
+  const dirty = nursingMonths !== data.settings.nursingMonths;
+  const setLanguage = (language: Language) => {
+    if (language !== data.settings.language) void saveSettings({ language });
+  };
   return (
     <Card title={t('general')}>
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          if (valid) void saveSettings({ language, nursingMonths }).then(onSaved);
+          if (valid) void saveSettings({ nursingMonths }).then(onSaved);
         }}
       >
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label={t('language')}>
             <Segmented
-              value={language}
+              value={data.settings.language}
               onChange={setLanguage}
               options={[
                 { value: 'bn', label: 'বাংলা' },
@@ -127,7 +155,7 @@ function GeneralCard({ onSaved }: { onSaved: (ok: boolean) => void }) {
             <NumberInput value={nursingMonths} step="1" onChange={setNursingMonths} />
           </Field>
         </div>
-        <Button type="submit" variant="primary" className="mt-4" disabled={!valid}>
+        <Button type="submit" variant="primary" className="mt-4" disabled={!valid || !dirty}>
           {t('save')}
         </Button>
       </form>
@@ -192,12 +220,12 @@ function RatesCard({ onSaved }: { onSaved: (ok: boolean) => void }) {
 }
 
 function CategoriesCard() {
-  const { t, data } = useApp();
+  const { t, data, lang } = useApp();
   const [editing, setEditing] = useState<{ category: Category; isNew: boolean } | null>(null);
   const range = (c: Category) =>
     c.group === 'mother'
       ? t(c.motherStage === 'nursing' ? 'nursing' : 'pregnant')
-      : `${c.minMonths ?? 0}–${c.maxMonths ?? '∞'} ${t('month')}`;
+      : `${formatMonths(c.minMonths ?? 0, lang)} – ${c.maxMonths === undefined ? '∞' : formatMonths(c.maxMonths, lang)}`;
 
   const addNew = () => {
     const maxOrder = Math.max(0, ...data.categories.map((c) => c.sortOrder));
@@ -286,6 +314,8 @@ function HolidaysCard({ onSaved }: { onSaved: (ok: boolean) => void }) {
           </Button>
         </div>
       </form>
+      <StateCalendarSection />
+      <div className="mt-5 mb-2 text-sm font-medium text-slate-700">{t('ownHolidays')}</div>
       {sorted.length > 0 && (
         <ul className="mb-3 divide-y divide-slate-100">
           {sorted.map((h) => (
@@ -320,6 +350,123 @@ function HolidaysCard({ onSaved }: { onSaved: (ok: boolean) => void }) {
         </Button>
       </form>
     </Card>
+  );
+}
+
+const SOURCE_LABEL: Record<HolidaySource, StringKey> = {
+  'wb-ics': 'sourceWbIcs',
+  'india-calendar-api': 'sourceIndiaApi',
+  'built-in': 'sourceBuiltIn',
+  none: 'sourceNone',
+};
+
+const MODE_LABEL: Record<StateHolidayMode, StringKey> = {
+  all: 'stateModeAll',
+  public: 'stateModePublic',
+  off: 'stateModeOff',
+};
+
+function StateCalendarSection() {
+  const { t, data, lang } = useApp();
+  const { settings } = data;
+  const calendars = data.holidayCalendars ?? [];
+  const mode = stateHolidayMode(settings);
+  const thisYear = Number(todayIso().slice(0, 4));
+  const years = calendars.map((c) => c.year);
+  const [year, setYear] = useState(years.includes(thisYear) ? thisYear : (years.at(-1) ?? thisYear));
+  const [checking, setChecking] = useState(false);
+  const calendar = calendars.find((c) => c.year === year);
+  const open = new Set(settings.openOnStateHolidays ?? []);
+  const shown = (calendar?.holidays ?? []).filter((h) => mode === 'all' || h.list === 'public');
+  const locale = lang === 'bn' ? 'bn-IN' : 'en-IN';
+
+  const setOpen = (date: string, isOpen: boolean) => {
+    const next = new Set(open);
+    if (isOpen) next.add(date);
+    else next.delete(date);
+    return saveSettings({ openOnStateHolidays: [...next].sort() });
+  };
+  const checkNow = async () => {
+    setChecking(true);
+    try {
+      await dataApi.refreshHolidays();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : String(e));
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  return (
+    <div className="mt-2 border-t border-slate-100 pt-4">
+      <div className="mb-1 text-sm font-medium text-slate-700">{t('stateCalendar')}</div>
+      <p className="mb-3 text-xs text-slate-500">{t('stateCalendarHint')}</p>
+      <Segmented
+        value={mode}
+        onChange={(stateHolidays) => void saveSettings({ stateHolidays })}
+        options={STATE_HOLIDAY_MODES.map((m) => ({ value: m, label: t(MODE_LABEL[m]) }))}
+      />
+      {mode !== 'off' && (
+        <>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <Button variant="ghost" className="px-2" disabled={!years.includes(year - 1)} onClick={() => setYear(year - 1)} aria-label="Previous year">
+              <ChevronLeft size={18} />
+            </Button>
+            <span className="min-w-14 text-center font-bold text-slate-900">{year}</span>
+            <Button variant="ghost" className="px-2" disabled={!years.includes(year + 1)} onClick={() => setYear(year + 1)} aria-label="Next year">
+              <ChevronRight size={18} />
+            </Button>
+            <Button className="ml-auto" disabled={checking} onClick={() => void checkNow()}>
+              <RefreshCw size={16} className={checking ? 'animate-spin' : ''} /> {t('checkNow')}
+            </Button>
+          </div>
+          <p className="mt-1 text-xs text-slate-500">
+            {t(SOURCE_LABEL[calendar?.source ?? 'none'])}
+            {calendar?.fetchedAt &&
+              ` · ${t('updatedOn')} ${new Date(calendar.fetchedAt).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' })}`}
+          </p>
+          {calendar && calendar.source !== 'none' && shown.length === 0 && <p className="mt-2 text-sm text-slate-500">{t('noStateHolidays')}</p>}
+          {shown.length > 0 && (
+            <ul className="mt-2 max-h-96 divide-y divide-slate-100 overflow-y-auto rounded-xl ring-1 ring-slate-200">
+              {shown.map((h) => {
+                const isOpen = open.has(h.date);
+                return (
+                  <li key={`${h.date}-${h.list}-${h.name}`} className="flex items-center gap-3 px-3 py-2">
+                    <span className="w-28 shrink-0 text-sm text-slate-500">{prettyDate(h.date, lang)}</span>
+                    <span className={`min-w-0 flex-1 text-sm ${isOpen ? 'text-slate-400 line-through' : 'font-medium text-slate-800'}`}>
+                      {h.name}
+                      <span className="ml-2 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+                        {t(h.list === 'public' ? 'listPublic' : 'listState')}
+                      </span>
+                      {isOpen && (
+                        <span className="ml-1 inline-block rounded-full bg-teal-100 px-2 py-0.5 text-[10px] font-semibold text-teal-800">{t('centreOpenTag')}</span>
+                      )}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => void setOpen(h.date, !isOpen)}
+                      className={`shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-semibold ${
+                        isOpen ? 'bg-orange-100 text-orange-800 hover:bg-orange-200' : 'bg-teal-50 text-teal-800 hover:bg-teal-100'
+                      }`}
+                    >
+                      {isOpen ? (
+                        <span className="inline-flex items-center gap-1">
+                          <CalendarX size={14} /> {t('markHoliday')}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1">
+                          <CalendarCheck size={14} /> {t('markOpen')}
+                        </span>
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </>
+      )}
+    </div>
   );
 }
 
@@ -372,6 +519,29 @@ function FuelItemsCard({ onSaved }: { onSaved: (ok: boolean) => void }) {
   );
 }
 
+const DEVELOPER_EMAIL = 'abhishekdasdev@outlook.com';
+
+function ContactCard() {
+  const { t, data, user } = useApp();
+  const { center } = data.settings;
+  const subject = `ICDS Reports — AWC ${center.number || '?'} ${center.name}`.trim();
+  const body = `\n\n—\n${user.name} (${user.login})\nAWC ${center.number} ${center.name}`;
+  const href = `mailto:${DEVELOPER_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  return (
+    <Card title={t('contactDeveloper')}>
+      <p className="mb-3 text-sm text-slate-600">{t('contactHint')}</p>
+      <div className="flex flex-wrap items-center gap-3">
+        <ButtonLink variant="primary" href={href}>
+          <Mail size={18} /> {t('emailDeveloper')}
+        </ButtonLink>
+        <a href={`mailto:${DEVELOPER_EMAIL}`} className="text-sm font-medium break-all text-teal-700 underline">
+          {DEVELOPER_EMAIL}
+        </a>
+      </div>
+    </Card>
+  );
+}
+
 function DataCard({ onDone }: { onDone: () => void }) {
   const { t, data } = useApp();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -394,13 +564,7 @@ function DataCard({ onDone }: { onDone: () => void }) {
     confirm(t('importConfirm')) &&
     run(async () => dataApi.importBackup(JSON.parse(await file.text()) as BackupFile));
 
-  /** Sample attendance and stock, but the account keeps its own centre details. */
-  const loadSample = () =>
-    confirm(t('sampleConfirm')) &&
-    run(() => {
-      const s = sampleData();
-      return dataApi.importBackup(exportBackup({ ...s, settings: { ...s.settings, center: data.settings.center, language: data.settings.language } }));
-    });
+  const loadDefaults = () => confirm(t('defaultsConfirm')) && run(() => dataApi.loadDefaults());
 
   const eraseAll = () => confirm(t('resetConfirm')) && run(() => dataApi.resetAll());
 
@@ -417,8 +581,8 @@ function DataCard({ onDone }: { onDone: () => void }) {
         <Button disabled={busy} onClick={() => fileRef.current?.click()}>
           <Upload size={18} /> {t('importBackup')}
         </Button>
-        <Button disabled={busy} onClick={() => void loadSample()}>
-          <Database size={18} /> {t('loadSample')}
+        <Button disabled={busy} onClick={() => void loadDefaults()}>
+          <RotateCcw size={18} /> {t('loadDefaults')}
         </Button>
         <Button variant="danger" disabled={busy} onClick={() => void eraseAll()}>
           <Trash2 size={18} /> {t('resetAll')}

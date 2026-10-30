@@ -7,6 +7,7 @@ import { registerAuth } from './auth';
 import type { Config } from './config';
 import { collections, ensureIndexes } from './db';
 import { registerDataRoutes } from './data';
+import { createHolidayService, type HolidayService } from './holidays/service';
 import { embeddedFontCss } from './reports/fonts';
 import { createPdfRenderer, findChrome } from './reports/pdf';
 import { registerReportRoutes, type ReportServices } from './reports/routes';
@@ -25,13 +26,20 @@ function defaultReportServices(config: Config): ReportServices {
 export async function buildApp(
   db: Db,
   config: Config,
-  options: { logger?: boolean; reports?: ReportServices } = {},
+  options: { logger?: boolean; reports?: ReportServices; holidays?: HolidayService } = {},
 ): Promise<FastifyInstance> {
   const app = Fastify({ logger: options.logger ?? false, bodyLimit: 10 * 1024 * 1024, trustProxy: true });
   const c = collections(db);
   await ensureIndexes(c);
   const reports = options.reports ?? defaultReportServices(config);
-  app.addHook('onClose', async () => reports.renderer?.close());
+  const holidays =
+    options.holidays ??
+    createHolidayService(c.holidayCalendars, { sync: config.holidaySync ?? false, warn: (msg) => app.log.warn(msg) });
+  holidays.start();
+  app.addHook('onClose', async () => {
+    holidays.stop();
+    await reports.renderer?.close();
+  });
   if (options.logger) {
     app.log.info({ storage: reports.storage.kind, pdf: Boolean(reports.renderer) }, 'report services');
   }
@@ -82,7 +90,7 @@ export async function buildApp(
   });
 
   registerAuth(app, c, config);
-  registerDataRoutes(app, c);
-  registerReportRoutes(app, c, reports);
+  registerDataRoutes(app, c, holidays);
+  registerReportRoutes(app, c, holidays, reports);
   return app;
 }

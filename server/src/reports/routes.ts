@@ -8,6 +8,7 @@ import { periodSlug } from '../../../src/reports/common';
 import { workbookBlob } from '../../../src/reports/excel';
 import { loadUserData } from '../data';
 import type { Collections, ReportDoc, ReportFile } from '../db';
+import type { HolidayService } from '../holidays/service';
 import { isoDateSchema, monthSchema } from '../schemas';
 import { reportsDocument } from './document';
 import type { PdfRenderer } from './pdf';
@@ -70,7 +71,7 @@ function uid(request: FastifyRequest): ObjectId {
   return request.userId;
 }
 
-export function registerReportRoutes(app: FastifyInstance, c: Collections, services: ReportServices) {
+export function registerReportRoutes(app: FastifyInstance, c: Collections, holidays: HolidayService, services: ReportServices) {
   const auth = { preHandler: app.requireUser };
 
   app.post(
@@ -80,7 +81,7 @@ export function registerReportRoutes(app: FastifyInstance, c: Collections, servi
       const { from, to, paper, sheets: requested } = generateSchema.parse(request.body);
       if (!services.renderer) return reply.code(503).send({ error: 'PDF generation is not available on this server' });
       const userId = uid(request);
-      const data = await loadUserData(c, userId);
+      const data = await loadUserData(c, holidays, userId, [from, to]);
       const settings = { ...data.settings, paperSize: paper };
       const summary = buildPeriodSummary(from, to, { ...data, settings });
       const sheets = REPORT_IDS.filter((id) => !requested || requested.includes(id));

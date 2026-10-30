@@ -11,8 +11,9 @@ import {
   type StockItemKey,
   type StockReceipt,
 } from '../db/schema';
-import { addDays, ageInMonths, dateRange, lastDateOfMonth, monthDates, monthOf, parseIso, shiftMonth, weekday } from './dates';
+import { addDays, ageGroupMonths, dateRange, lastDateOfMonth, monthDates, monthOf, parseIso, shiftMonth, weekday } from './dates';
 import { resolveCategory } from './eligibility';
+import { calendarHolidayOn, type HolidayCalendar } from './holidays';
 import {
   countPresent,
   dayCosts,
@@ -32,6 +33,8 @@ export interface AppData {
   days: DayRecord[];
   receipts: StockReceipt[];
   monthMetas: MonthMeta[];
+  /** West Bengal Government holiday lists by year; shared by every account and not part of backups. */
+  holidayCalendars?: HolidayCalendar[];
 }
 
 export type DayKind = 'working' | 'holiday' | 'unrecorded';
@@ -41,17 +44,24 @@ export interface DayStatus {
   /** Holiday name (festival) – empty for a plain weekly off. */
   label?: string;
   isWeeklyOff: boolean;
+  /** Set when the holiday comes from the calendar rather than a saved day. */
+  holidaySource?: 'custom' | 'state';
 }
 
-export function resolveDayStatus(date: string, record: DayRecord | undefined, settings: Settings): DayStatus {
+export function resolveDayStatus(
+  date: string,
+  record: DayRecord | undefined,
+  settings: Settings,
+  calendars: readonly HolidayCalendar[] = [],
+): DayStatus {
   const isWeeklyOff = settings.weeklyOffDays.includes(weekday(date));
   if (record) {
     return record.status === 'working'
       ? { kind: 'working', isWeeklyOff }
       : { kind: 'holiday', label: record.holidayReason, isWeeklyOff };
   }
-  const holiday = settings.holidays.find((h) => h.date === date);
-  if (holiday) return { kind: 'holiday', label: holiday.name, isWeeklyOff };
+  const holiday = calendarHolidayOn(date, settings, calendars);
+  if (holiday) return { kind: 'holiday', label: holiday.name, isWeeklyOff, holidaySource: holiday.source };
   if (isWeeklyOff) return { kind: 'holiday', isWeeklyOff };
   return { kind: 'unrecorded', isWeeklyOff };
 }
@@ -193,7 +203,7 @@ function buildRows(dates: readonly string[], ctx: Context): DayRow[] {
   const { settings, receipts } = ctx.data;
   return dates.map((date) => {
     const record = ctx.dayMap.get(date);
-    const status = resolveDayStatus(date, record, settings);
+    const status = resolveDayStatus(date, record, settings, ctx.data.holidayCalendars);
     const working = status.kind === 'working' && record !== undefined;
     const counts = working
       ? countPresent(record.presentIds, date, ctx.beneficiaryMap, ctx.categories, settings.nursingMonths)
@@ -277,7 +287,8 @@ function enrolledAt(date: string, ctx: Context): MonthSummary['enrolled'] {
       else e.pregnant += 1;
       continue;
     }
-    const age = ageInMonths(b.dob, date);
+    if (!b.dob) continue;
+    const age = ageGroupMonths(b.dob, date);
     if (age >= 6 && age < 36) e.childUnder3 += 1;
     else if (age >= 36 && age < 72) e.child3to6 += 1;
   }
