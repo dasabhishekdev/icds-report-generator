@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
-import { BadgeCheck, CheckCheck, ChevronLeft, ChevronRight, CircleCheck, Eraser, Pencil, Send, UserPlus } from 'lucide-react';
-import { db } from '../db/db';
+import { BadgeCheck, CheckCheck, ChevronLeft, ChevronRight, CircleCheck, Eraser, Pencil, Save, Send, UserPlus } from 'lucide-react';
+import { dataApi } from '../api/data';
 import { ITEM_KEYS, type Beneficiary, type DayRecord, type MealType } from '../db/schema';
 import { countPresent, dayCosts, dayRation } from '../domain/calc';
 import { addDays, ageInMonths, formatAge, prettyDate, toIso, todayIso } from '../domain/dates';
@@ -11,15 +11,31 @@ import { ITEM_LABEL, formatQty, rupees } from '../lib/format';
 import { useApp } from '../state/AppDataContext';
 import { Button, Card, Modal, Segmented, Stat, TextInput, Toggle } from '../components/ui';
 
-function ReasonInput({ initial, placeholder, onSave }: { initial: string; placeholder: string; onSave: (v: string) => void }) {
+function ReasonForm({ initial, onSave }: { initial: string; onSave: (v: string) => Promise<boolean> }) {
+  const { t } = useApp();
   const [value, setValue] = useState(initial);
+  const [saved, setSaved] = useState(false);
+  const dirty = value.trim() !== initial.trim();
   return (
-    <TextInput
-      placeholder={placeholder}
-      value={value}
-      onChange={(e) => setValue(e.target.value)}
-      onBlur={() => value !== initial && onSave(value)}
-    />
+    <form
+      className="flex gap-2"
+      onSubmit={(e) => {
+        e.preventDefault();
+        void onSave(value.trim()).then((ok) => setSaved(ok));
+      }}
+    >
+      <TextInput
+        placeholder={t('holidayReason')}
+        value={value}
+        onChange={(e) => {
+          setValue(e.target.value);
+          setSaved(false);
+        }}
+      />
+      <Button type="submit" variant="primary" className="shrink-0" disabled={!dirty}>
+        {saved && !dirty ? <CircleCheck size={18} /> : <Save size={18} />} {saved && !dirty ? t('saved') : t('save')}
+      </Button>
+    </form>
   );
 }
 
@@ -53,15 +69,14 @@ export function AttendancePage() {
       presentIds: [],
       updatedAt: 0,
     };
-    await db.days.put({ ...base, updatedAt: Date.now(), ...patch });
+    return dataApi.saveDay({ ...base, updatedAt: Date.now(), ...patch });
   }
 
   const submission = submissionState(record);
   const [confirming, setConfirming] = useState(false);
   const submit = async () => {
     const now = Date.now();
-    await save({ status: 'working', meal, submittedAt: now, updatedAt: now });
-    setConfirming(false);
+    if (await save({ status: 'working', meal, submittedAt: now, updatedAt: now })) setConfirming(false);
   };
 
   const toggle = (id: string) => {
@@ -142,11 +157,10 @@ export function AttendancePage() {
         </div>
         {!open && (
           <div className="mt-3">
-            <ReasonInput
+            <ReasonForm
               key={date}
               initial={status.label ?? ''}
-              placeholder={t('holidayReason')}
-              onSave={(reason) => void save({ status: 'holiday', holidayReason: reason || undefined })}
+              onSave={(reason) => save({ status: 'holiday', holidayReason: reason || undefined })}
             />
           </div>
         )}

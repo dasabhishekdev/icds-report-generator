@@ -8,3 +8,6 @@ tmp
 *.tsbuildinfo
 *.log
 .DS_Store
+.env
+dist-server
+backups

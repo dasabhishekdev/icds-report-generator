@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { db } from '../db/db';
+import { dataApi } from '../api/data';
 import { ITEM_KEYS, MEAL_TYPES, type Category, type ItemKey, type MealType } from '../db/schema';
 import { ITEM_LABEL, MEAL_LABEL } from '../lib/format';
 import { useApp } from '../state/AppDataContext';
@@ -25,14 +25,12 @@ export function CategoryEditor({ category, isNew, onDone }: { category: Category
   const valid = c.name.trim() !== '' && (c.group === 'mother' || (c.maxMonths ?? 0) > (c.minMonths ?? 0));
 
   async function save() {
-    await db.categories.put({ ...c, name: c.name.trim() });
-    onDone();
+    if (await dataApi.saveCategory({ ...c, name: c.name.trim() })) onDone();
   }
 
   async function remove() {
     if (!confirm(t('confirmDelete'))) return;
-    await db.categories.delete(c.id);
-    onDone();
+    if (await dataApi.deleteCategory(c.id)) onDone();
   }
 
   return (

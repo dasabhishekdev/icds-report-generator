@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router';
-import { CalendarDays, ClipboardCheck, FileSpreadsheet, Settings, Users } from 'lucide-react';
+import { CalendarDays, ClipboardCheck, FileSpreadsheet, LogOut, Settings, Users } from 'lucide-react';
 import { useApp } from '../state/AppDataContext';
 import type { StringKey } from '../i18n/strings';
 
@@ -12,7 +12,7 @@ const NAV: { to: string; label: StringKey; icon: typeof Users }[] = [
 ];
 
 export function Layout() {
-  const { t, data } = useApp();
+  const { t, data, user, logout } = useApp();
   const c = data.settings.center;
   return (
     <div className="min-h-dvh bg-slate-100 md:flex">
@@ -45,7 +45,21 @@ export function Layout() {
             </NavLink>
           ))}
         </nav>
-        <div className="p-4 text-xs text-slate-400">{c.workerName}</div>
+        <div className="flex items-center gap-2 border-t border-slate-100 p-3">
+          <div className="min-w-0 flex-1 px-1">
+            <div className="truncate text-sm font-semibold text-slate-700">{user.name}</div>
+            <div className="truncate text-xs text-slate-400">{user.login}</div>
+          </div>
+          <button
+            type="button"
+            onClick={() => void logout()}
+            className="rounded-lg p-2 text-slate-500 hover:bg-red-50 hover:text-red-600"
+            aria-label={t('logout')}
+            title={t('logout')}
+          >
+            <LogOut size={18} />
+          </button>
+        </div>
       </aside>
 
       <div className="min-w-0 flex-1">

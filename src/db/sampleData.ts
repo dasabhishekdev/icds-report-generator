@@ -1,5 +1,5 @@
 import type { Beneficiary, ChildBeneficiary, DayRecord, Gender, MonthMeta, Settings, StockReceipt } from './schema';
-import { defaultCategories, defaultSettings } from './defaults';
+import { defaultCategories, defaultSettings, SAMPLE_CENTER } from './defaults';
 import type { AppData } from '../domain/month';
 
 /**
@@ -44,7 +44,7 @@ const GIRL_NAMES = ['Puja', 'Riya', 'Mitali', 'Payel', 'Ankita', 'Sneha', 'Tania
 
 export function sampleData(): AppData {
   const settings: Settings = {
-    ...defaultSettings(),
+    ...defaultSettings(SAMPLE_CENTER),
     holidays: [
       { date: '2026-10-19', name: 'অষ্টমী (Astami)' },
       { date: '2026-10-20', name: 'নবমী (Nabami)' },

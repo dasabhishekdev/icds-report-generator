@@ -1,4 +1,4 @@
-import type { Category, ItemQuantities, Norms, Settings } from './schema';
+import type { Category, CenterInfo, ItemQuantities, Norms, Settings } from './schema';
 
 const zero: ItemQuantities = { rice: 0, dal: 0, oil: 0, salt: 0, egg: 0, veg: 0, potato: 0, chatu: 0 };
 
@@ -29,21 +29,39 @@ export function defaultCategories(): Category[] {
   ];
 }
 
-export function defaultSettings(): Settings {
+export function emptyCenter(): CenterInfo {
+  return {
+    name: '',
+    number: '',
+    code: '',
+    gramPanchayat: '',
+    project: '',
+    district: '',
+    workerName: '',
+    vegShopkeeper: '',
+    fuelShopkeeper: '',
+  };
+}
+
+/** AWC 547 — the centre whose September 2026 registers the defaults were derived from. */
+export const SAMPLE_CENTER: CenterInfo = {
+  name: 'Balta Tangakure',
+  number: '547',
+  code: '19337201026',
+  gramPanchayat: 'Palla',
+  project: 'বনগাঁ গ্রামীণ',
+  district: 'উত্তর ২৪ পরগণা',
+  workerName: 'Swapna Das Sikdar',
+  vegShopkeeper: 'অমিত বিশ্বাস (Amit Biswas)',
+  fuelShopkeeper: 'রমেন বিশ্বাস (Ramen Biswas)',
+};
+
+/** Defaults every new account starts with; only the centre details are the user's own. */
+export function defaultSettings(center: Partial<CenterInfo> = {}): Settings {
   return {
     id: 'settings',
     language: 'bn',
-    center: {
-      name: 'Balta Tangakure',
-      number: '547',
-      code: '19337201026',
-      gramPanchayat: 'Palla',
-      project: 'বনগাঁ গ্রামীণ',
-      district: 'উত্তর ২৪ পরগণা',
-      workerName: 'Swapna Das Sikdar',
-      vegShopkeeper: 'অমিত বিশ্বাস (Amit Biswas)',
-      fuelShopkeeper: 'রমেন বিশ্বাস (Ramen Biswas)',
-    },
+    center: { ...emptyCenter(), ...center },
     rates: { egg: 8.5, veg: 20, potato: 28, chatu: 167 },
     nursingMonths: 6,
     weeklyOffDays: [0],

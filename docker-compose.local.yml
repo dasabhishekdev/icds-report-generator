@@ -1,6 +1,9 @@
-# Local standalone override — publishes the app on http://localhost:8084.
+# Local standalone override — http://localhost:8084 (plain HTTP, so session cookies are not Secure).
 
 services:
   web:
     ports:
       - "8084:8080"
+  api:
+    environment:
+      COOKIE_SECURE: "false"

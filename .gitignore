@@ -6,3 +6,6 @@ dev-dist
 *.tsbuildinfo
 .playwright-mcp
 tmp
+.env
+dist-server
+backups

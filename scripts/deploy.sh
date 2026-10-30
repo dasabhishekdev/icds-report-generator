@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 # Production deploy — runs on the VPS (manually or from GitHub Actions).
-# Builds a new image, swaps the container, verifies it and rolls back on failure.
+# Builds new web/api images, swaps the containers, verifies them and rolls back on failure.
+# MongoDB keeps running; its data lives in the icds-mongo-data volume.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-IMAGE=icds-report-generator
-CONTAINER=icds-web
+IMAGES=(icds-report-generator-web icds-report-generator-api)
+CONTAINERS=(icds-web icds-api icds-mongo)
 export GIT_SHA="${GIT_SHA:-$(git rev-parse --short HEAD 2>/dev/null || echo manual)}"
 
 if ! docker network inspect web >/dev/null 2>&1; then
@@ -15,48 +16,63 @@ if ! docker network inspect web >/dev/null 2>&1; then
   exit 1
 fi
 
+if [[ ! -f .env ]]; then
+  echo "==> Creating .env with a random MongoDB password (kept on this server only)"
+  umask 077
+  sed "s/^MONGO_ROOT_PASSWORD=.*/MONGO_ROOT_PASSWORD=$(openssl rand -hex 24)/" .env.example > .env
+fi
+
 wait_healthy() {
-  for _ in $(seq 1 30); do
-    status="$(docker inspect --format '{{.State.Health.Status}}' "$CONTAINER" 2>/dev/null || echo missing)"
-    [[ "$status" == healthy ]] && return 0
-    sleep 2
+  local name status
+  for name in "${CONTAINERS[@]}"; do
+    for _ in $(seq 1 45); do
+      status="$(docker inspect --format '{{.State.Health.Status}}' "$name" 2>/dev/null || echo missing)"
+      [[ "$status" == healthy ]] && continue 2
+      sleep 2
+    done
+    echo "Container $name did not become healthy (last status: $status)." >&2
+    return 1
   done
-  echo "Container $CONTAINER did not become healthy (last status: $status)." >&2
-  return 1
 }
 
 smoke_test() {
-  docker run --rm --network web curlimages/curl:8.10.1 -fsS "http://$CONTAINER:8080/healthz" >/dev/null &&
-    docker run --rm --network web curlimages/curl:8.10.1 -fsS "http://$CONTAINER:8080/" | grep -q '<div id="root">'
+  local curl=(docker run --rm --network web curlimages/curl:8.10.1 -fsS)
+  "${curl[@]}" http://icds-web:8080/healthz >/dev/null &&
+    "${curl[@]}" http://icds-web:8080/ | grep -q '<div id="root">' &&
+    "${curl[@]}" http://icds-web:8080/api/health | grep -q '"ok":true'
 }
 
-had_previous=false
-if docker image inspect "$IMAGE:latest" >/dev/null 2>&1; then
-  docker tag "$IMAGE:latest" "$IMAGE:previous"
-  had_previous=true
-fi
+had_previous=true
+for image in "${IMAGES[@]}"; do
+  if docker image inspect "$image:latest" >/dev/null 2>&1; then
+    docker tag "$image:latest" "$image:previous"
+  else
+    had_previous=false
+  fi
+done
 
-echo "==> Building $IMAGE ($GIT_SHA)"
+echo "==> Building images ($GIT_SHA)"
 docker compose build --pull
 
-echo "==> Starting $CONTAINER"
+echo "==> Starting containers"
 docker compose up -d --remove-orphans
 
 echo "==> Verifying"
 if wait_healthy && smoke_test; then
-  docker tag "$IMAGE:latest" "$IMAGE:$GIT_SHA"
+  for image in "${IMAGES[@]}"; do
+    docker tag "$image:latest" "$image:$GIT_SHA"
+    docker image prune -f --filter "label=org.opencontainers.image.title=$image" >/dev/null
+  done
   docker compose ps
-  echo "==> Pruning old $IMAGE images"
-  docker image prune -f --filter "label=org.opencontainers.image.title=$IMAGE" >/dev/null
   echo "Deploy complete: $GIT_SHA"
   exit 0
 fi
 
 echo "==> Deploy failed — rolling back" >&2
-docker logs --tail 50 "$CONTAINER" >&2 || true
+docker compose logs --tail 50 web api >&2 || true
 if [[ "$had_previous" == true ]]; then
-  docker tag "$IMAGE:previous" "$IMAGE:latest"
-  docker compose up -d --no-build --force-recreate
-  wait_healthy && echo "Rolled back to previous image." >&2
+  for image in "${IMAGES[@]}"; do docker tag "$image:previous" "$image:latest"; done
+  docker compose up -d --no-build --force-recreate web api
+  wait_healthy && echo "Rolled back to previous images." >&2
 fi
 exit 1

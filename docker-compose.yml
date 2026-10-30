@@ -1,34 +1,39 @@
-# ICDS Report Generator — static web app only.
+# ICDS Report Generator — web (nginx), api (Node) and mongo.
 #
-# Joins the shared Docker network `web` created by the hosting router, which owns
-# the public domain icds.educoreva.com, TLS and Cloudflare handling.
+# Only `web` joins the shared Docker network `web` created by the hosting router, which owns the
+# public domain icds.educoreva.com. The API and MongoDB live on the private `icds-internal` network.
 #
-# Production (on the VPS):  bash scripts/deploy.sh
-# Local standalone:          docker network create web   # once, if the router is not running
+# Production (on the VPS):  bash scripts/deploy.sh   (creates .env with a random Mongo password)
+# Local standalone:          cp .env.example .env && docker network create web   # once
 #                            docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
 #                            → http://localhost:8084
 
+x-hardening: &hardening
+  read_only: true
+  cap_drop: [ALL]
+  security_opt:
+    - no-new-privileges:true
+  restart: unless-stopped
+
 services:
   web:
+    <<: *hardening
     container_name: icds-web
-    image: icds-report-generator:latest
+    image: icds-report-generator-web:latest
     build:
       context: .
+      target: web
       args:
         GIT_SHA: ${GIT_SHA:-unknown}
     expose:
       - "8080"
+    tmpfs:
+      - /tmp
     networks:
       web:
         aliases: [icds-web]
-    read_only: true
-    tmpfs:
-      - /tmp
-    cap_drop: [ALL]
-    security_opt:
-      - no-new-privileges:true
+      internal: {}
     mem_limit: 128m
-    restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
       interval: 30s
@@ -36,7 +41,60 @@ services:
       retries: 3
       start_period: 5s
 
+  api:
+    <<: *hardening
+    container_name: icds-api
+    image: icds-report-generator-api:latest
+    build:
+      context: .
+      target: api
+      args:
+        GIT_SHA: ${GIT_SHA:-unknown}
+    environment:
+      MONGO_URL: mongodb://${MONGO_ROOT_USER:-icds}:${MONGO_ROOT_PASSWORD:?Set MONGO_ROOT_PASSWORD in .env}@icds-mongo:27017/icds?authSource=admin
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-true}
+    expose:
+      - "4000"
+    networks:
+      internal:
+        aliases: [icds-api]
+    depends_on:
+      mongo:
+        condition: service_healthy
+    mem_limit: 256m
+
+  mongo:
+    container_name: icds-mongo
+    image: mongo:7
+    command: ["--wiredTigerCacheSizeGB", "0.25"]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-icds}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?Set MONGO_ROOT_PASSWORD in .env}
+    volumes:
+      - icds-mongo-data:/data/db
+    networks:
+      internal:
+        aliases: [icds-mongo]
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 512m
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
 networks:
   web:
     external: true
     name: web
+  internal:
+    name: icds-internal
+    internal: true
+
+volumes:
+  icds-mongo-data:
+    name: icds-mongo-data

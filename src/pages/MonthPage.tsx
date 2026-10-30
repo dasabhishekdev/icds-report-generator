@@ -1,21 +1,17 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { ChevronLeft, ChevronRight, Plus, RotateCcw, Trash2 } from 'lucide-react';
-import { db, newId } from '../db/db';
-import { STOCK_ITEM_KEYS, type MonthMeta, type StockItemKey } from '../db/schema';
+import { ChevronLeft, ChevronRight, Plus, RotateCcw, Save, Trash2 } from 'lucide-react';
+import { dataApi, newId } from '../api/data';
+import { STOCK_ITEM_KEYS, type FuelLineOverride, type StockItemKey } from '../db/schema';
+import { round2 } from '../domain/calc';
 import { currentMonth, monthLabel, shiftMonth, todayIso, WEEKDAYS_BN, WEEKDAYS_EN, weekday } from '../domain/dates';
 import { buildMonthSummary, openingStockFor, type AppData, type MonthSummary } from '../domain/month';
 import { formatQty, rupees } from '../lib/format';
 import { STOCK_LABEL, STOCK_LABEL_EN } from '../reports/common';
 import { useApp } from '../state/AppDataContext';
-import { Button, Card, Field, NumberInput, Segmented, Select, Stat, TextInput } from '../components/ui';
+import { Button, Card, Field, Flash, NumberInput, Segmented, Select, Stat, TextInput, useFlash } from '../components/ui';
 
 type Tab = 'calendar' | 'stock' | 'fuel';
-
-export async function updateMonthMeta(month: string, fn: (m: MonthMeta) => MonthMeta) {
-  const current = (await db.monthMetas.get(month)) ?? { month };
-  await db.monthMetas.put(fn(current));
-}
 
 export function MonthSwitcher({ month, onChange }: { month: string; onChange: (m: string) => void }) {
   const { lang } = useApp();
@@ -65,8 +61,8 @@ export function MonthPage() {
         ]}
       />
       {tab === 'calendar' && <CalendarGrid summary={summary} />}
-      {tab === 'stock' && <StockPanel summary={summary} data={data} />}
-      {tab === 'fuel' && <FuelPanel summary={summary} />}
+      {tab === 'stock' && <StockPanel key={month} summary={summary} data={data} />}
+      {tab === 'fuel' && <FuelPanel key={month} summary={summary} />}
     </div>
   );
 }
@@ -154,49 +150,62 @@ function StockPanel({ summary, data }: { summary: MonthSummary; data: AppData })
   const negative = STOCK_ITEM_KEYS.some((item) => summary.rows.some((r) => r.closing[item] < 0));
   const label = (item: StockItemKey) => (lang === 'bn' ? STOCK_LABEL[item] : STOCK_LABEL_EN[item]);
 
+  const saved = meta?.openingStock ?? {};
+  const [draft, setDraft] = useState<Partial<Record<StockItemKey, number>>>(saved);
+  const [flash, setFlash] = useFlash();
+  const dirty = STOCK_ITEM_KEYS.some((item) => draft[item] !== saved[item]);
   const setOpening = (item: StockItemKey, v: number | undefined) =>
-    updateMonthMeta(summary.month, (m) => {
-      const openingStock = { ...m.openingStock };
-      if (v === undefined) delete openingStock[item];
-      else openingStock[item] = v;
-      return { ...m, openingStock };
+    setDraft((prev) => {
+      const next = { ...prev };
+      if (v === undefined) delete next[item];
+      else next[item] = v;
+      return next;
     });
+
+  async function save() {
+    if (await dataApi.saveMonthMeta({ ...(meta ?? { month: summary.month }), openingStock: draft })) setFlash(t('saved'));
+  }
 
   return (
     <div className="space-y-4">
       {negative && <div className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-800 ring-1 ring-red-200">{t('negativeStock')}</div>}
       <Card title={t('stock')}>
-        <p className="mb-3 text-xs text-slate-500">{t('openingHint')}</p>
-        <div className="space-y-3">
-          {STOCK_ITEM_KEYS.map((item) => {
-            const { received, consumed } = totals(item);
-            const override = meta?.openingStock?.[item];
-            return (
-              <div key={item} className="rounded-xl bg-slate-50 p-3">
-                <div className="mb-2 font-bold text-slate-800">{label(item)}</div>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  <div>
-                    <div className="mb-1 text-xs text-slate-500">
-                      {t('openingBalance')} {override === undefined && `(${t('auto')})`}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void save();
+          }}
+        >
+          <p className="mb-3 text-xs text-slate-500">{t('openingHint')}</p>
+          <div className="space-y-3">
+            {STOCK_ITEM_KEYS.map((item) => {
+              const { received, consumed } = totals(item);
+              const override = draft[item];
+              return (
+                <div key={item} className="rounded-xl bg-slate-50 p-3">
+                  <div className="mb-2 font-bold text-slate-800">{label(item)}</div>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    <div>
+                      <div className="mb-1 text-xs text-slate-500">
+                        {t('openingBalance')} {override === undefined && `(${t('auto')})`}
+                      </div>
+                      <NumberInput value={override} placeholder={String(autoOpening[item])} onChange={(v) => setOpening(item, v)} />
                     </div>
-                    <NumberInput
-                      value={override}
-                      placeholder={String(autoOpening[item])}
-                      onChange={(v) => void setOpening(item, v)}
+                    <MiniStat label={t('received')} value={formatQty(item, received, t)} />
+                    <MiniStat label={t('consumed')} value={formatQty(item, consumed, t)} />
+                    <MiniStat
+                      label={t('closingBalance')}
+                      value={formatQty(item, summary.closing[item], t)}
+                      danger={summary.closing[item] < 0}
                     />
                   </div>
-                  <MiniStat label={t('received')} value={formatQty(item, received, t)} />
-                  <MiniStat label={t('consumed')} value={formatQty(item, consumed, t)} />
-                  <MiniStat
-                    label={t('closingBalance')}
-                    value={formatQty(item, summary.closing[item], t)}
-                    danger={summary.closing[item] < 0}
-                  />
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+          <SaveBar dirty={dirty} onCancel={() => setDraft(saved)} />
+        </form>
+        <Flash message={flash} />
       </Card>
       <ReceiptsCard key={summary.month} summary={summary} />
     </div>
@@ -224,14 +233,14 @@ function ReceiptsCard({ summary }: { summary: MonthSummary }) {
 
   async function add() {
     if (!kg || !inMonth) return;
-    await db.receipts.add({
+    const ok = await dataApi.saveReceipt({
       id: newId(),
       date,
       item,
       quantity: Math.round(kg * 1000),
       challanNo: challan.trim() || undefined,
     });
-    setKg(undefined);
+    if (ok) setKg(undefined);
   }
 
   return (
@@ -247,14 +256,22 @@ function ReceiptsCard({ summary }: { summary: MonthSummary }) {
                 {label(r.item)} · {formatQty(r.item, r.quantity, t)}
                 {r.challanNo && <span className="ml-2 text-xs font-normal text-slate-500">#{r.challanNo}</span>}
               </span>
-              <button type="button" onClick={() => void db.receipts.delete(r.id)} className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600" aria-label={t('delete')}>
+              <button type="button" onClick={() => {
+                  if (confirm(t('confirmDelete'))) void dataApi.deleteReceipt(r.id);
+                }} className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600" aria-label={t('delete')}>
                 <Trash2 size={18} />
               </button>
             </li>
           ))}
         </ul>
       )}
-      <div className="mt-4 grid gap-3 rounded-xl bg-slate-50 p-3 sm:grid-cols-5">
+      <form
+        className="mt-4 grid gap-3 rounded-xl bg-slate-50 p-3 sm:grid-cols-5"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void add();
+        }}
+      >
         <Field label={t('date')}>
           <TextInput type="date" value={date} min={summary.firstDate} max={summary.lastDate} onChange={(e) => setDate(e.target.value)} />
         </Field>
@@ -268,11 +285,11 @@ function ReceiptsCard({ summary }: { summary: MonthSummary }) {
           <TextInput value={challan} onChange={(e) => setChallan(e.target.value)} />
         </Field>
         <div className="flex items-end">
-          <Button variant="primary" className="w-full" disabled={!kg || !inMonth} onClick={() => void add()}>
+          <Button type="submit" variant="primary" className="w-full" disabled={!kg || !inMonth}>
             <Plus size={18} /> {t('add')}
           </Button>
         </div>
-      </div>
+      </form>
     </Card>
   );
 }
@@ -280,49 +297,101 @@ function ReceiptsCard({ summary }: { summary: MonthSummary }) {
 function FuelPanel({ summary }: { summary: MonthSummary }) {
   const { t, data } = useApp();
   const meta = data.monthMetas.find((m) => m.month === summary.month);
-  const setOverride = (id: string, patch: { quantity?: number; rate?: number }, reset = false) =>
-    updateMonthMeta(summary.month, (m) => {
-      const others = (m.fuelOverrides ?? []).filter((o) => o.fuelItemId !== id);
-      if (reset) return { ...m, fuelOverrides: others };
-      const current = m.fuelOverrides?.find((o) => o.fuelItemId === id) ?? { fuelItemId: id };
-      return { ...m, fuelOverrides: [...others, { ...current, ...patch }] };
+  const saved = meta?.fuelOverrides ?? [];
+  const [draft, setDraft] = useState<FuelLineOverride[]>(saved);
+  const [flash, setFlash] = useFlash();
+  const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
+
+  const auto = (id: string) => {
+    const item = data.settings.fuelItems.find((f) => f.id === id);
+    return { quantity: round2((item?.qtyPerBeneficiaryDay ?? 0) * summary.beneficiaryDays), rate: item?.rate ?? 0 };
+  };
+  const setLine = (id: string, patch: Omit<FuelLineOverride, 'fuelItemId'> | null) =>
+    setDraft((prev) => {
+      const others = prev.filter((o) => o.fuelItemId !== id);
+      if (!patch) return others;
+      const current = prev.find((o) => o.fuelItemId === id) ?? { fuelItemId: id };
+      return [...others, { ...current, ...patch }];
     });
+
+  const lines = data.settings.fuelItems.map((item) => {
+    const o = draft.find((x) => x.fuelItemId === item.id);
+    const a = auto(item.id);
+    const quantity = o?.quantity ?? a.quantity;
+    const rate = o?.rate ?? a.rate;
+    return { ...item, quantity, rate, amount: round2(quantity * rate), overridden: Boolean(o) };
+  });
+  const total = round2(lines.reduce((s, l) => s + l.amount, 0));
+
+  async function save() {
+    if (await dataApi.saveMonthMeta({ ...(meta ?? { month: summary.month }), fuelOverrides: draft })) setFlash(t('saved'));
+  }
 
   return (
     <Card title={t('fuelItems')}>
-      <p className="mb-3 text-xs text-slate-500">
-        {t('fuelHint')} ({t('beneficiaryDays')}: {summary.beneficiaryDays})
-      </p>
-      <div className="space-y-3">
-        {summary.fuel.map((line) => {
-          const overridden = meta?.fuelOverrides?.some((o) => o.fuelItemId === line.id);
-          return (
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          void save();
+        }}
+      >
+        <p className="mb-3 text-xs text-slate-500">
+          {t('fuelHint')} ({t('beneficiaryDays')}: {summary.beneficiaryDays})
+        </p>
+        <div className="space-y-3">
+          {lines.map((line) => (
             <div key={line.id} className="rounded-xl bg-slate-50 p-3">
               <div className="mb-2 flex items-center justify-between gap-2">
                 <span className="font-semibold text-slate-800">{line.name}</span>
-                {overridden && (
-                  <button type="button" className="flex items-center gap-1 text-xs font-semibold text-teal-700" onClick={() => void setOverride(line.id, {}, true)}>
+                {line.overridden && (
+                  <button type="button" className="flex items-center gap-1 text-xs font-semibold text-teal-700" onClick={() => setLine(line.id, null)}>
                     <RotateCcw size={14} /> {t('reset')}
                   </button>
                 )}
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <Field label={`${t('quantity')} (${line.unit})`}>
-                  <NumberInput value={line.quantity} onChange={(v) => void setOverride(line.id, { quantity: v ?? 0 })} />
+                  <NumberInput value={line.quantity} onChange={(v) => setLine(line.id, { quantity: v ?? 0 })} />
                 </Field>
                 <Field label={t('rate')}>
-                  <NumberInput value={line.rate} onChange={(v) => void setOverride(line.id, { rate: v ?? 0 })} />
+                  <NumberInput value={line.rate} onChange={(v) => setLine(line.id, { rate: v ?? 0 })} />
                 </Field>
                 <MiniStat label={t('amount')} value={rupees(line.amount)} />
               </div>
             </div>
-          );
-        })}
-      </div>
-      <div className="mt-3 flex items-center justify-between rounded-xl bg-teal-50 px-3 py-2 font-bold text-teal-900">
-        <span>{t('total')}</span>
-        <span className="tabular-nums">{rupees(summary.fuelTotal)}</span>
-      </div>
+          ))}
+        </div>
+        <div className="mt-3 flex items-center justify-between rounded-xl bg-teal-50 px-3 py-2 font-bold text-teal-900">
+          <span>{t('total')}</span>
+          <span className="tabular-nums">{rupees(total)}</span>
+        </div>
+        <SaveBar dirty={dirty} onCancel={() => setDraft(saved)} />
+      </form>
+      <Flash message={flash} />
     </Card>
+  );
+}
+
+/** Save / discard actions for a draft form; disabled until something changed. */
+function SaveBar({ dirty, onCancel }: { dirty: boolean; onCancel: () => void }) {
+  const { t } = useApp();
+  return (
+    <div
+      className={`mt-4 flex items-center gap-2 ${
+        dirty
+          ? 'sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] z-20 rounded-2xl bg-white p-3 shadow-lg ring-1 ring-amber-200 md:bottom-4'
+          : ''
+      }`}
+    >
+      <Button type="submit" variant="primary" disabled={!dirty} className="flex-1 sm:flex-none">
+        <Save size={18} /> {t('save')}
+      </Button>
+      {dirty && (
+        <Button onClick={onCancel}>
+          {t('cancel')}
+        </Button>
+      )}
+      {dirty && <span className="text-xs font-medium text-amber-700">{t('unsavedChanges')}</span>}
+    </div>
   );
 }

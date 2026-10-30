@@ -55,8 +55,10 @@ echo "Deploy target: $REMOTE_USER@$PROD_SSH_HOST:$REMOTE_DIR ($GIT_SHA)"
 
 "${SSH_ARGS[@]}" "$REMOTE_USER@$PROD_SSH_HOST" "mkdir -p -- '$REMOTE_DIR'"
 printf -v RSYNC_SSH '%q ' "${SSH_ARGS[@]}"
+# Excluded paths are also protected from --delete: the VPS-only .env (Mongo password) and backups survive.
 rsync -az --delete \
   --exclude '.git/' --exclude '.github/' --exclude 'node_modules/' --exclude 'dist/' \
-  --exclude 'dev-dist/' --exclude 'tmp/' --exclude '.playwright-mcp/' \
+  --exclude 'dist-server/' --exclude 'dev-dist/' --exclude 'tmp/' --exclude '.playwright-mcp/' \
+  --exclude '/.env' --exclude '/backups/' \
   -e "$RSYNC_SSH" ./ "$REMOTE_USER@$PROD_SSH_HOST:$REMOTE_DIR/"
 "${SSH_ARGS[@]}" "$REMOTE_USER@$PROD_SSH_HOST" "cd '$REMOTE_DIR' && GIT_SHA='$GIT_SHA' bash scripts/deploy.sh"

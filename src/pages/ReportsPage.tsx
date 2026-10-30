@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertTriangle, FileDown, FileSpreadsheet, Maximize2, Printer } from 'lucide-react';
-import { db } from '../db/db';
+import { dataApi } from '../api/data';
 import type { PaperSize } from '../db/schema';
 import { currentMonth, monthShort, todayIso } from '../domain/dates';
 import { buildMonthSummary } from '../domain/month';
@@ -28,7 +28,7 @@ function printZoom(model: SheetModel, heightPx: number, paper: PaperSize): numbe
 export function ReportsPage() {
   const { data, t } = useApp();
   const paper: PaperSize = data.settings.paperSize ?? 'A4';
-  const setPaper = (paperSize: PaperSize) => void db.settings.update('settings', { paperSize });
+  const setPaper = (paperSize: PaperSize) => void dataApi.saveSettings({ paperSize });
   const [month, setMonth] = useState(currentMonth());
   const summary = useMemo(() => buildMonthSummary(month, data), [month, data]);
   const reports = useMemo(() => buildAllReports(summary, data.settings), [summary, data.settings]);

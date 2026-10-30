@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { db, newId } from '../db/db';
+import { dataApi, newId } from '../api/data';
 import type { Beneficiary, Gender } from '../db/schema';
 import { monthOf, todayIso } from '../domain/dates';
 import { useApp } from '../state/AppDataContext';
@@ -70,14 +70,12 @@ export function BeneficiaryForm({
             expectedDeliveryDate: opt(d.expectedDeliveryDate),
             deliveryDate: opt(d.deliveryDate),
           };
-    await db.beneficiaries.put(record);
-    onDone();
+    if (await dataApi.saveBeneficiary(record)) onDone();
   }
 
   async function remove() {
     if (!existing || !confirm(t('confirmDelete'))) return;
-    await db.beneficiaries.delete(existing.id);
-    onDone();
+    if (await dataApi.deleteBeneficiary(existing.id)) onDone();
   }
 
   return (
