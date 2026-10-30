@@ -15,6 +15,14 @@ export interface Config {
   s3?: S3Config;
   /** Download West Bengal holiday lists from the internet; otherwise only cached and built-in lists. */
   holidaySync?: boolean;
+  /** AES-256 key for saved Poshan portal passwords; without it they cannot be saved. */
+  portalSecret?: Buffer;
+}
+
+function portalSecret(value: string | undefined): Buffer | undefined {
+  if (!value) return undefined;
+  if (!/^[0-9a-fA-F]{64}$/.test(value)) throw new Error('PORTAL_SECRET must be 64 hex characters (openssl rand -hex 32)');
+  return Buffer.from(value, 'hex');
 }
 
 const flag = (value: string | undefined, fallback: boolean) =>
@@ -43,5 +51,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
         }
       : undefined,
     holidaySync: flag(env.HOLIDAY_SYNC, true),
+    portalSecret: portalSecret(env.PORTAL_SECRET),
   };
 }

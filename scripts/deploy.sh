@@ -22,6 +22,17 @@ if [[ ! -f .env ]]; then
   sed "s/^MONGO_ROOT_PASSWORD=.*/MONGO_ROOT_PASSWORD=$(openssl rand -hex 24)/" .env.example > .env
 fi
 
+# Older .env files have no portal key; never replace one that is set (saved passwords depend on it).
+if ! grep -q '^PORTAL_SECRET=.' .env; then
+  echo "==> Adding a random PORTAL_SECRET to .env"
+  portal_secret="$(openssl rand -hex 32)"
+  if grep -q '^PORTAL_SECRET=' .env; then
+    sed -i "s/^PORTAL_SECRET=.*/PORTAL_SECRET=$portal_secret/" .env
+  else
+    printf '\nPORTAL_SECRET=%s\n' "$portal_secret" >> .env
+  fi
+fi
+
 wait_healthy() {
   local name status
   for name in "${CONTAINERS[@]}"; do

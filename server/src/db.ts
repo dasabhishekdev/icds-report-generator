@@ -1,6 +1,8 @@
 import { MongoClient, type Collection, type Db, type ObjectId } from 'mongodb';
 import type { Beneficiary, Category, DayRecord, MonthMeta, Settings, StockReceipt } from '../../src/db/schema';
 import type { HolidaySource, StateHoliday } from '../../src/domain/holidays';
+import type { PhotoContentType } from '../../src/domain/photoName';
+import type { SealedSecret } from './portal/crypto';
 
 export interface UserDoc {
   _id: ObjectId;
@@ -53,6 +55,35 @@ export interface HolidayCalendarDoc {
   holidays: StateHoliday[];
 }
 
+/** A compressed Jan Andolan photo; the image and its thumbnail live in report storage under the user's prefix. */
+export interface PhotoDoc {
+  _id: ObjectId;
+  userId: ObjectId;
+  /** Month of `capturedAt` in India time; photos are listed by it. */
+  month: string;
+  name: string;
+  contentType: PhotoContentType;
+  size: number;
+  width: number;
+  height: number;
+  originalSize: number;
+  originalWidth: number;
+  originalHeight: number;
+  capturedAt: Date;
+  createdAt: Date;
+  storage: 's3' | 'disk';
+  key: string;
+  thumbKey: string;
+}
+
+/** The worker's Poshan Abhiyaan portal login; the password is encrypted with PORTAL_SECRET. */
+export interface PortalLoginDoc {
+  userId: ObjectId;
+  username: string;
+  password: SealedSecret;
+  updatedAt: Date;
+}
+
 /** Every application document carries its owner; all queries filter on userId. */
 type Owned<T> = T & { userId: ObjectId };
 
@@ -67,6 +98,8 @@ export interface Collections {
   monthMetas: Collection<Owned<MonthMeta>>;
   reports: Collection<ReportDoc>;
   holidayCalendars: Collection<HolidayCalendarDoc>;
+  photos: Collection<PhotoDoc>;
+  portalLogins: Collection<PortalLoginDoc>;
 }
 
 export function collections(db: Db): Collections {
@@ -81,6 +114,8 @@ export function collections(db: Db): Collections {
     monthMetas: db.collection('monthMetas'),
     reports: db.collection('reports'),
     holidayCalendars: db.collection('holidayCalendars'),
+    photos: db.collection('photos'),
+    portalLogins: db.collection('portalLogins'),
   };
 }
 
@@ -98,6 +133,8 @@ export async function ensureIndexes(c: Collections): Promise<void> {
     c.receipts.createIndex({ userId: 1, id: 1 }, { unique: true }),
     c.monthMetas.createIndex({ userId: 1, month: 1 }, { unique: true }),
     c.reports.createIndex({ userId: 1, month: 1, createdAt: -1 }),
+    c.photos.createIndex({ userId: 1, month: 1, createdAt: -1 }),
+    c.portalLogins.createIndex({ userId: 1 }, { unique: true }),
   ]);
 }
 

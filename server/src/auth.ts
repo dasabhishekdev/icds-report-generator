@@ -13,6 +13,12 @@ declare module 'fastify' {
 }
 
 export const SESSION_COOKIE = 'icds_session';
+
+/** The signed-in user of a route guarded by `app.requireUser`. */
+export function sessionUserId(request: FastifyRequest): ObjectId {
+  if (!request.userId) throw new Error('requireUser did not run');
+  return request.userId;
+}
 const SESSION_DAYS = 30;
 const SCRYPT = { N: 16384, r: 8, p: 1, keylen: 64 };
 
