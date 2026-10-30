@@ -321,6 +321,14 @@ const strings = {
   photoKept: { bn: 'ছবিটি আগেই ১.৫ MB-এর কম — যেমন ছিল তেমনই রাখা হয়েছে।', en: 'The photo is already under 1.5 MB — kept unchanged.' },
   downloadPhoto: { bn: 'ছবি ডাউনলোড করুন', en: 'Download photo' },
   sharePhoto: { bn: 'শেয়ার / গ্যালারিতে রাখুন', en: 'Share / save to gallery' },
+  iphoneDownloadHint: {
+    bn: 'iPhone-এ ডাউনলোড করা ছবি Files অ্যাপে (Chrome বা Downloads ফোল্ডারে) থাকে। পোর্টালে আপলোডের সময় "Choose File" থেকে বেছে নিন।',
+    en: 'On iPhone, downloaded photos go to the Files app (Chrome or Downloads folder). On the portal, pick it with "Choose File".',
+  },
+  iphoneShareHint: {
+    bn: 'Photos-এ রাখতে "শেয়ার / গ্যালারিতে রাখুন" চেপে "Save Image" বেছে নিন।',
+    en: 'To put it in Photos, tap "Share / save to gallery" and choose "Save Image".',
+  },
   photoDownloadStarted: {
     bn: 'ডাউনলোড শুরু হয়েছে। ফোনের Downloads-এ না পেলে উপরের "ছবি ডাউনলোড করুন" চাপুন।',
     en: 'Download started. If it is not in your Downloads, tap "Download photo" above.',

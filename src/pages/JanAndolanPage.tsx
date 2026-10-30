@@ -30,6 +30,9 @@ type Step =
   | { kind: 'failed'; code: PhotoErrorCode }
   | ({ kind: 'done'; upload: UploadStatus; savedId: string | null; autoDownloaded: boolean } & Result);
 
+/** Every iPhone/iPad browser, Chrome included; iPadOS reports itself as a Mac with touch. */
+const IS_IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
 const ERROR_TEXT: Record<PhotoErrorCode, StringKey> = {
   tooBig: 'photoTooBig',
   unreadable: 'photoUnreadable',
@@ -157,6 +160,11 @@ export function JanAndolanPage() {
               </div>
             )}
             <UploadLine status={step.upload} onRetry={() => void upload(run.current, step, false)} />
+            {IS_IOS && (
+              <p className="rounded-xl bg-amber-50 px-3 py-2 text-amber-900 ring-1 ring-amber-200">
+                {t('iphoneDownloadHint')} {step.shareFile && t('iphoneShareHint')}
+              </p>
+            )}
           </div>
         </Card>
       )}
