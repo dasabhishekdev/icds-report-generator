@@ -3,6 +3,7 @@ import { ObjectId } from 'mongodb';
 import { z } from 'zod';
 import { daysBetweenInclusive, lastDateOfMonth } from '../../../src/domain/dates';
 import { buildPeriodSummary } from '../../../src/domain/month';
+import { safeFilePart } from '../../../src/domain/photoName';
 import { buildAllReports, REPORT_IDS, type ReportId } from '../../../src/reports';
 import { periodSlug } from '../../../src/reports/common';
 import { workbookBlob } from '../../../src/reports/excel';
@@ -47,10 +48,6 @@ const fileParams = z.strictObject({ id: z.string().regex(/^[a-f0-9]{24}$/), kind
 const idParams = z.strictObject({ id: z.string().regex(/^[a-f0-9]{24}$/) });
 
 const XLSX_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-
-/** File-name fragment from user-entered text (the centre number). */
-const safePart = (s: string) => s.replace(/[^A-Za-z0-9_-]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 30) || 'centre';
-
 export function publicReport(doc: ReportDoc) {
   return {
     id: doc._id.toHexString(),
@@ -87,7 +84,7 @@ export function registerReportRoutes(app: FastifyInstance, c: Collections, holid
       const sheets = REPORT_IDS.filter((id) => !requested || requested.includes(id));
       const models = buildAllReports(summary, settings, sheets);
       const month = summary.month;
-      const centre = `AWC_${safePart(settings.center.number)}`;
+      const centre = `AWC_${safeFilePart(settings.center.number)}`;
       const label = sheets.length === REPORT_IDS.length ? 'ICDS_Reports' : sheets.length === 1 ? SHEET_FILE[sheets[0]] : `ICDS_Reports_${sheets.join('-')}`;
       const base = `${centre}_${label}_${periodSlug(summary)}_${paper}`;
 
