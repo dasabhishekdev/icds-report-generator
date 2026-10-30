@@ -85,8 +85,8 @@ export function SavedPhotosPage() {
                       </span>
                     </div>
                     <div className="mt-2 flex flex-wrap gap-2">
-                      <ButtonLink variant="primary" href={photosApi.fileUrl(p.id)} download={p.name}>
-                        <Download size={16} /> {t('downloadAgain')}
+                      <ButtonLink variant="primary" href={photosApi.fileUrl(p.id)} download={p.name} className="ring-2 ring-teal-300 ring-offset-1">
+                        <Download size={16} /> {t('downloadPhoto')}
                       </ButtonLink>
                       <Button variant="ghost" className="text-red-600" onClick={() => void remove(p)} aria-label={t('delete')}>
                         <Trash2 size={16} />

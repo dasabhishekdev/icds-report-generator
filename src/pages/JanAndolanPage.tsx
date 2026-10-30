@@ -1,23 +1,34 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
-import { Camera, CheckCircle2, CloudOff, Download, Images, Loader2 } from 'lucide-react';
+import { Camera, CheckCircle2, CloudOff, Download, Images, Loader2, Share2 } from 'lucide-react';
+import { reportError } from '../api/http';
 import { photosApi } from '../api/photos';
 import { photoFileName } from '../domain/photoName';
 import { compressPhoto, PhotoError, type CompressedPhoto, type PhotoErrorCode } from '../lib/compressPhoto';
-import { downloadBlob } from '../lib/download';
+import { startDownload } from '../lib/download';
 import { fileSize } from '../lib/format';
 import type { StringKey } from '../i18n/strings';
 import { useApp } from '../state/AppDataContext';
-import { Button, Card } from '../components/ui';
+import { Button, ButtonLink, Card } from '../components/ui';
 import { PortalShortcutCard } from '../components/PortalShortcutCard';
 
 type UploadStatus = 'saving' | 'saved' | 'failed';
+
+interface Result {
+  photo: CompressedPhoto;
+  name: string;
+  capturedAt: Date;
+  /** Object URL of the reduced photo; lives as long as the result is shown. */
+  preview: string;
+  /** Set when the phone can share the file (save to gallery, WhatsApp …). */
+  shareFile: File | null;
+}
 
 type Step =
   | { kind: 'idle' }
   | { kind: 'working' }
   | { kind: 'failed'; code: PhotoErrorCode }
-  | { kind: 'done'; photo: CompressedPhoto; name: string; capturedAt: Date; preview: string; upload: UploadStatus };
+  | ({ kind: 'done'; upload: UploadStatus; savedId: string | null; autoDownloaded: boolean } & Result);
 
 const ERROR_TEXT: Record<PhotoErrorCode, StringKey> = {
   tooBig: 'photoTooBig',
@@ -36,16 +47,24 @@ export function JanAndolanPage() {
   const preview = step.kind === 'done' ? step.preview : null;
   useEffect(() => (preview ? () => URL.revokeObjectURL(preview) : undefined), [preview]);
 
-  async function upload(id: number, photo: CompressedPhoto, capturedAt: Date) {
-    const setUpload = (status: UploadStatus) => {
-      if (run.current === id) setStep((s) => (s.kind === 'done' ? { ...s, upload: status } : s));
+  /**
+   * Saves on the server, then (first time only) downloads the saved copy: phones handle a normal
+   * file download more reliably than an in-memory blob. Falls back to the blob if saving fails.
+   */
+  async function upload(id: number, result: Result, autoDownload: boolean) {
+    const update = (patch: Partial<Extract<Step, { kind: 'done' }>>) => {
+      if (run.current === id) setStep((s) => (s.kind === 'done' ? { ...s, ...patch } : s));
     };
-    setUpload('saving');
+    update({ upload: 'saving' });
     try {
-      await photosApi.upload(photo, capturedAt);
-      setUpload('saved');
+      const saved = await photosApi.upload(result.photo, result.capturedAt);
+      if (run.current !== id) return;
+      update({ upload: 'saved', savedId: saved.id, ...(autoDownload && { autoDownloaded: true }) });
+      if (autoDownload) startDownload(photosApi.fileUrl(saved.id), result.name);
     } catch {
-      setUpload('failed');
+      if (run.current !== id) return;
+      update({ upload: 'failed', ...(autoDownload && { autoDownloaded: true }) });
+      if (autoDownload) startDownload(result.preview, result.name);
     }
   }
 
@@ -57,11 +76,21 @@ export function JanAndolanPage() {
       if (run.current !== id) return;
       const capturedAt = new Date(file.lastModified || Date.now());
       const name = photoFileName(data.settings.center.number, capturedAt, photo.contentType);
-      downloadBlob(photo.image, name);
-      setStep({ kind: 'done', photo, name, capturedAt, preview: URL.createObjectURL(photo.image), upload: 'saving' });
-      void upload(id, photo, capturedAt);
+      const asFile = new File([photo.image], name, { type: photo.contentType });
+      const shareFile = typeof navigator.canShare === 'function' && navigator.canShare({ files: [asFile] }) ? asFile : null;
+      const result: Result = { photo, name, capturedAt, preview: URL.createObjectURL(photo.image), shareFile };
+      setStep({ kind: 'done', ...result, upload: 'saving', savedId: null, autoDownloaded: false });
+      void upload(id, result, true);
     } catch (e) {
       if (run.current === id) setStep({ kind: 'failed', code: e instanceof PhotoError ? e.code : 'unreadable' });
+    }
+  }
+
+  async function share(file: File, name: string) {
+    try {
+      await navigator.share({ files: [file], title: name });
+    } catch (e) {
+      if (!(e instanceof DOMException && e.name === 'AbortError')) reportError(e);
     }
   }
 
@@ -106,14 +135,28 @@ export function JanAndolanPage() {
           </div>
           {step.photo.kept && <p className="mt-2 text-sm text-slate-600">{t('photoKept')}</p>}
           <div className="mt-3 break-all text-xs text-slate-500">{step.name}</div>
-          <div className="mt-3 space-y-2 text-sm">
-            <div className="flex flex-wrap items-center gap-2 text-teal-800">
-              <CheckCircle2 size={18} /> {t('photoDownloaded')}
-              <Button variant="ghost" onClick={() => downloadBlob(step.photo.image, step.name)}>
-                <Download size={16} /> {t('downloadAgain')}
+          <div className="mt-3 space-y-2">
+            <ButtonLink
+              variant="primary"
+              href={step.savedId ? photosApi.fileUrl(step.savedId) : step.preview}
+              download={step.name}
+              className="w-full py-3 text-base ring-2 ring-teal-300 ring-offset-2"
+            >
+              <Download size={20} /> {t('downloadPhoto')} ({fileSize(step.photo.image.size)})
+            </ButtonLink>
+            {step.shareFile && (
+              <Button className="w-full" onClick={() => void share(step.shareFile!, step.name)}>
+                <Share2 size={18} /> {t('sharePhoto')}
               </Button>
-            </div>
-            <UploadLine status={step.upload} onRetry={() => void upload(run.current, step.photo, step.capturedAt)} />
+            )}
+          </div>
+          <div className="mt-3 space-y-2 text-sm">
+            {step.autoDownloaded && (
+              <div className="flex items-start gap-2 text-teal-800">
+                <CheckCircle2 size={18} className="mt-0.5 shrink-0" /> {t('photoDownloadStarted')}
+              </div>
+            )}
+            <UploadLine status={step.upload} onRetry={() => void upload(run.current, step, false)} />
           </div>
         </Card>
       )}
