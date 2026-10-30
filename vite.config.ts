@@ -25,6 +25,14 @@ export default defineConfig({
         display: 'standalone',
         start_url: '/',
         icons: [{ src: 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' }],
+        shortcuts: [
+          {
+            name: 'Jan Andolan photo',
+            short_name: 'Jan Andolan',
+            url: '/#/jan-andolan',
+            icons: [{ src: 'icon.svg', sizes: 'any', type: 'image/svg+xml' }],
+          },
+        ],
       },
     }),
   ],

@@ -34,6 +34,7 @@ import { downloadJson } from '../lib/download';
 import type { StringKey } from '../i18n/strings';
 import { useApp } from '../state/AppDataContext';
 import { Button, ButtonLink, Card, Field, Flash, Modal, NumberInput, Segmented, TextInput, useFlash } from '../components/ui';
+import { PortalLoginCard } from '../components/PortalLoginCard';
 import { CategoryEditor } from './CategoryEditor';
 
 const saveSettings = (patch: Partial<Omit<Settings, 'id'>>) => dataApi.saveSettings(patch);
@@ -47,6 +48,7 @@ export function SettingsPage() {
     <div className="space-y-4">
       <h1 className="text-xl font-bold text-slate-900">{t('navSettings')}</h1>
       <AccountCard onDone={(msg) => setFlash(msg)} />
+      <PortalLoginCard onDone={(msg) => setFlash(msg)} />
       <LanguageCard />
       <NursingPeriodCard key={nursingMonths} onSaved={saved} />
       <CentreCard key={JSON.stringify(center)} onSaved={saved} />

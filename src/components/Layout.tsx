@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router';
-import { CalendarDays, ClipboardCheck, FileSpreadsheet, LogOut, Settings, Users } from 'lucide-react';
+import { CalendarDays, Camera, ClipboardCheck, FileSpreadsheet, LogOut, Settings, Users } from 'lucide-react';
 import { useApp } from '../state/AppDataContext';
 import type { StringKey } from '../i18n/strings';
 
@@ -8,6 +8,7 @@ const NAV: { to: string; label: StringKey; icon: typeof Users }[] = [
   { to: '/month', label: 'navMonth', icon: CalendarDays },
   { to: '/people', label: 'navPeople', icon: Users },
   { to: '/reports', label: 'navReports', icon: FileSpreadsheet },
+  { to: '/jan-andolan', label: 'navJanAndolan', icon: Camera },
   { to: '/settings', label: 'navSettings', icon: Settings },
 ];
 
@@ -77,19 +78,19 @@ export function Layout() {
         </main>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] md:hidden">
         {NAV.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
             to={to}
             end={to === '/'}
             className={({ isActive }) =>
-              `flex flex-col items-center gap-0.5 py-2 text-[11px] font-semibold ${isActive ? 'text-teal-700' : 'text-slate-500'}`
+              `flex min-w-0 flex-col items-center gap-0.5 py-2 text-center text-[11px] leading-tight font-semibold ${isActive ? 'text-teal-700' : 'text-slate-500'}`
             }
           >
             {({ isActive }) => (
               <>
-                <span className={`rounded-full px-4 py-1 ${isActive ? 'bg-teal-50' : ''}`}>
+                <span className={`rounded-full px-3 py-1 ${isActive ? 'bg-teal-50' : ''}`}>
                   <Icon size={22} />
                 </span>
                 {t(label)}

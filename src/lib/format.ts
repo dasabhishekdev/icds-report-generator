@@ -27,5 +27,8 @@ export function periodText(p: { from: string; to: string }, lang: Language): str
   return p.from === `${month}-01` && p.to === lastDateOfMonth(month) ? monthLabel(month, lang) : `${dotted(p.from)} – ${dotted(p.to)}`;
 }
 
+/** Decimal units, as the Poshan portal counts them (2 MB = 2,000,000 bytes). */
+export const fileSize = (bytes: number) => (bytes >= 1_000_000 ? `${(bytes / 1_000_000).toFixed(2)} MB` : `${Math.max(1, Math.round(bytes / 1000))} KB`);
+
 export const rupees = (n: number) =>
   `₹${n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
