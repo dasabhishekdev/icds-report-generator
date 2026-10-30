@@ -1,8 +1,8 @@
 import { STOCK_ITEM_KEYS, type Settings, type StockItemKey } from '../db/schema';
 import { STOCK_AGE_BANDS } from '../domain/calc';
-import { dotted, monthLabel, monthShort } from '../domain/dates';
+import { dotted } from '../domain/dates';
 import type { MonthSummary } from '../domain/month';
-import { holidayText, mealLabel, STOCK_LABEL, STOCK_LABEL_EN, stockUnit, trimNum } from './common';
+import { STOCK_LABEL, STOCK_LABEL_EN, dayLabel, holidayText, mealLabel, periodLabel, periodSlug, stockUnit, trimNum } from './common';
 import { addr, blankZero, colLetter, S, SheetBuilder, zebra, type SheetModel } from './sheet';
 
 /** First column (1-based) of each stock item's receipt / consumption / balance triple. */
@@ -13,8 +13,8 @@ export function buildStockRegister(summary: MonthSummary, settings: Settings): S
   const c = settings.center;
   const b = new SheetBuilder({
     id: 'stock',
-    name: `Stock_Consumption_${monthShort(summary.month)}`,
-    fileName: `4_AWC_${c.number}_Stock_Consumption_Register_${monthShort(summary.month)}`,
+    name: `Stock_Consumption_${periodSlug(summary)}`,
+    fileName: `4_AWC_${c.number}_Stock_Consumption_Register_${periodSlug(summary)}`,
     title: 'মজুত ও খরচ রেজিস্টার (Stock)',
     colWidths: [12, 12, ...Array(30).fill(11)],
     landscape: true,
@@ -22,7 +22,7 @@ export function buildStockRegister(summary: MonthSummary, settings: Settings): S
 
   b.mergeSet(
     'A1:AF1',
-    `অংশ ২: পরিপূরক আহারের খাদ্য সামগ্রীর দৈনিক খরচ ও মজুতের বিবরণ (${monthLabel(summary.month)}) - কেন্দ্র নং: ${c.number} (Code: ${c.code})`,
+    `অংশ ২: পরিপূরক আহারের খাদ্য সামগ্রীর দৈনিক খরচ ও মজুতের বিবরণ (${periodLabel(summary)}) - কেন্দ্র নং: ${c.number} (Code: ${c.code})`,
     S.title,
   ).height(1, 28);
 
@@ -67,7 +67,7 @@ export function buildStockRegister(summary: MonthSummary, settings: Settings): S
     const bold = holiday ? S.holidayCell : zebra(S.cellBold, i);
     const qty = holiday ? S.holidayCell : zebra({ ...S.cell, numFmt: '#,##0.##' }, i);
 
-    b.set(`A${r}`, row.day, cell);
+    b.set(`A${r}`, dayLabel(row, summary), cell);
     if (holiday) b.set(`B${r}`, holidayText(row, 'short'), S.holiday);
     else b.set(`B${r}`, row.served ? mealLabel(row.meal!, false) : null, cell);
 

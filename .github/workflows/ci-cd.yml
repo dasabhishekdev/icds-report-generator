@@ -40,9 +40,11 @@ jobs:
       - name: Typecheck (app and server)
         run: npx tsc -b
 
-      - name: Unit and API tests
+      - name: Unit, API and report-generation tests
         env:
           MONGO_URL: mongodb://127.0.0.1:27017
+          # Preinstalled on GitHub's Ubuntu runners; used by Puppeteer for the PDF tests.
+          CHROME_PATH: /usr/bin/google-chrome
         run: npm test
 
       - name: Build
@@ -70,9 +72,18 @@ jobs:
           curl_web http://icds-web:8080/ | grep -q '<div id="root">'
           curl_web -I http://icds-web:8080/ | grep -qi 'content-security-policy'
           curl_web http://icds-web:8080/api/health | grep -q '"ok":true'
-          curl_web -H 'Content-Type: application/json' \
-            -d '{"login":"ci@example.com","password":"ci-password","name":"CI","center":{"name":"CI Centre","number":"1"}}' \
-            http://icds-web:8080/api/auth/register | grep -q '"login":"ci@example.com"'
+          # Register, generate a month of reports with Puppeteer inside icds-api, and download the PDF.
+          docker run --rm --network web --entrypoint sh curlimages/curl:8.10.1 -ec '
+            api=http://icds-web:8080/api; j=/tmp/cookies
+            curl -fsS -c $j -H "Content-Type: application/json" \
+              -d "{\"login\":\"ci@example.com\",\"password\":\"ci-password\",\"name\":\"CI\",\"center\":{\"name\":\"CI Centre\",\"number\":\"1\"}}" \
+              $api/auth/register | grep -q "\"login\":\"ci@example.com\""
+            id=$(curl -fsS -b $j -H "Content-Type: application/json" -d "{\"from\":\"2026-10-01\",\"to\":\"2026-10-31\",\"paper\":\"A4\"}" \
+              $api/reports | sed -n "s/.*\"id\":\"\([a-f0-9]*\)\".*/\1/p")
+            test -n "$id"
+            curl -fsS -b $j -o /tmp/r.pdf $api/reports/$id/files/pdf && head -c 5 /tmp/r.pdf | grep -q "%PDF-"
+            curl -fsS -b $j -o /tmp/r.xlsx $api/reports/$id/files/xlsx && head -c 2 /tmp/r.xlsx | grep -q "PK"
+          '
           docker compose down -v
 
   deploy:

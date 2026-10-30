@@ -1,15 +1,14 @@
 import type { Settings } from '../db/schema';
-import { monthLabel, monthShort } from '../domain/dates';
 import type { MonthSummary } from '../domain/month';
-import { holidayText, splitRupees } from './common';
+import { dayLabel, holidayText, periodCaption, periodLabel, periodSlug, splitRupees } from './common';
 import { blankZero, S, SheetBuilder, zebra, type SheetModel } from './sheet';
 
 export function buildFuelSpices(summary: MonthSummary, settings: Settings): SheetModel {
   const c = settings.center;
   const b = new SheetBuilder({
     id: 'fuel',
-    name: `Fuel_Spices_${monthShort(summary.month)}`,
-    fileName: `1_AWC_${c.number}_Fuel_Spices_${monthShort(summary.month)}`,
+    name: `Fuel_Spices_${periodSlug(summary)}`,
+    fileName: `1_AWC_${c.number}_Fuel_Spices_${periodSlug(summary)}`,
     title: 'জ্বালানী ও মশলা খরচ (Fuel & Spices)',
     colWidths: [12, 16, 16, 15, 16, 14, 16, 16, 26],
     landscape: false,
@@ -19,7 +18,7 @@ export function buildFuelSpices(summary: MonthSummary, settings: Settings): Shee
   b.mergeSet('A1:I1', `অঙ্গনওয়াড়ী কেন্দ্রের জ্বালানী ও মশলা খরচের হিসাব (লোকাল ফুড) - ${c.number}`, S.title).height(1, 28);
   b.mergeSet('A2:C2', `কেন্দ্রের নাম ও নং: ${c.name}, ${c.number}`, S.info)
     .mergeSet('D2:F2', `গ্রাম পঞ্চায়েত/ওয়ার্ড নং: ${c.gramPanchayat}`, S.info)
-    .mergeSet('G2:I2', `মাস ও সাল: ${monthLabel(summary.month)}`, S.info)
+    .mergeSet('G2:I2', `${periodCaption(summary)}: ${periodLabel(summary)}`, S.info)
     .height(2, 20);
   b.mergeSet('A3:C3', `নথিভুক্ত গর্ভবতী: ${e.pregnant} | প্রসূতি: ${e.nursing}`, S.info)
     .mergeSet('D3:F3', `শিশু (৬ মাস - ৩ বঃ): ${e.childUnder3}`, S.info)
@@ -45,13 +44,13 @@ export function buildFuelSpices(summary: MonthSummary, settings: Settings): Shee
     const r = first + i;
     b.height(r, 19);
     if (row.status.kind === 'holiday') {
-      for (const col of 'ABCDEFGH') b.set(`${col}${r}`, col === 'A' ? row.day : null, S.holidayCell);
+      for (const col of 'ABCDEFGH') b.set(`${col}${r}`, col === 'A' ? dayLabel(row, summary) : null, S.holidayCell);
       b.set(`I${r}`, holidayText(row, 'long'), { ...S.holiday, align: 'left' });
       return;
     }
     const cell = zebra(S.cell, i);
     const bold = zebra(S.cellBold, i);
-    b.set(`A${r}`, row.day, cell);
+    b.set(`A${r}`, dayLabel(row, summary), cell);
     if (!row.served) {
       for (const col of 'BCDEFGHI') b.set(`${col}${r}`, null, cell);
       return;

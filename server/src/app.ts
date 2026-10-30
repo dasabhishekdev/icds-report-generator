@@ -7,11 +7,34 @@ import { registerAuth } from './auth';
 import type { Config } from './config';
 import { collections, ensureIndexes } from './db';
 import { registerDataRoutes } from './data';
+import { embeddedFontCss } from './reports/fonts';
+import { createPdfRenderer, findChrome } from './reports/pdf';
+import { registerReportRoutes, type ReportServices } from './reports/routes';
+import { diskStorage, s3Storage } from './reports/storage';
 
-export async function buildApp(db: Db, config: Config, options: { logger?: boolean } = {}): Promise<FastifyInstance> {
+function defaultReportServices(config: Config): ReportServices {
+  const chrome = findChrome(config.chromePath);
+  let fontCss: string | null = null;
+  return {
+    storage: config.s3 ? s3Storage(config.s3) : diskStorage(config.reportsDir),
+    renderer: chrome ? createPdfRenderer(chrome) : null,
+    fontCss: () => (fontCss ??= embeddedFontCss(config.fontDir)),
+  };
+}
+
+export async function buildApp(
+  db: Db,
+  config: Config,
+  options: { logger?: boolean; reports?: ReportServices } = {},
+): Promise<FastifyInstance> {
   const app = Fastify({ logger: options.logger ?? false, bodyLimit: 10 * 1024 * 1024, trustProxy: true });
   const c = collections(db);
   await ensureIndexes(c);
+  const reports = options.reports ?? defaultReportServices(config);
+  app.addHook('onClose', async () => reports.renderer?.close());
+  if (options.logger) {
+    app.log.info({ storage: reports.storage.kind, pdf: Boolean(reports.renderer) }, 'report services');
+  }
 
   await app.register(cookie);
   await app.register(rateLimit, {
@@ -60,5 +83,6 @@ export async function buildApp(db: Db, config: Config, options: { logger?: boole
 
   registerAuth(app, c, config);
   registerDataRoutes(app, c);
+  registerReportRoutes(app, c, reports);
   return app;
 }

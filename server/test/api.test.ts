@@ -5,6 +5,7 @@ import { sampleData } from '../../src/db/sampleData';
 import type { BackupFile } from '../../src/db/schema';
 import { buildApp } from '../src/app';
 import { SESSION_COOKIE } from '../src/auth';
+import { diskStorage } from '../src/reports/storage';
 
 const MONGO_URL = process.env.MONGO_URL;
 
@@ -17,12 +18,11 @@ describe.skipIf(!MONGO_URL)('API', () => {
   beforeAll(async () => {
     client = new MongoClient(MONGO_URL!, { ignoreUndefined: true });
     await client.connect();
-    app = await buildApp(client.db(dbName), {
-      port: 0,
-      mongoUrl: MONGO_URL!,
-      cookieSecure: false,
-      allowRegistration: true,
-    });
+    app = await buildApp(
+      client.db(dbName),
+      { port: 0, mongoUrl: MONGO_URL!, cookieSecure: false, allowRegistration: true, fontDir: '', reportsDir: '' },
+      { reports: { storage: diskStorage('tmp/test-unused'), renderer: null, fontCss: () => '' } },
+    );
   });
 
   afterAll(async () => {

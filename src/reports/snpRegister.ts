@@ -1,15 +1,14 @@
 import type { Settings } from '../db/schema';
-import { monthLabel, monthShort } from '../domain/dates';
 import type { MonthSummary } from '../domain/month';
-import { holidayText, inr, mealLabel, splitRupees } from './common';
+import { dayLabel, holidayText, inr, mealLabel, periodCaption, periodLabel, periodSlug, splitRupees } from './common';
 import { blankZero, S, SheetBuilder, zebra, type SheetModel } from './sheet';
 
 export function buildSnpRegister(summary: MonthSummary, settings: Settings): SheetModel {
   const c = settings.center;
   const b = new SheetBuilder({
     id: 'snp',
-    name: `SNP_Veg_Egg_${monthShort(summary.month)}`,
-    fileName: `3_AWC_${c.number}_SNP_Veg_Egg_Register_${monthShort(summary.month)}`,
+    name: `SNP_Veg_Egg_${periodSlug(summary)}`,
+    fileName: `3_AWC_${c.number}_SNP_Veg_Egg_Register_${periodSlug(summary)}`,
     title: 'সবজী ও ডিম রেজিস্টার (SNP)',
     colWidths: [10, 14, 12, 12, 12, 14, 14, 14, 12, 14, 16, 14, 14, 18, 16],
     landscape: true,
@@ -22,7 +21,7 @@ export function buildSnpRegister(summary: MonthSummary, settings: Settings): She
   ).height(1, 28);
   b.mergeSet(
     'A2:O2',
-    `কেন্দ্রের নাম ও নং: ${c.name}, ${c.number} (Code: ${c.code}) | পঞ্চায়েত: ${c.gramPanchayat} | মাস ও সাল: ${monthLabel(summary.month)}`,
+    `কেন্দ্রের নাম ও নং: ${c.name}, ${c.number} (Code: ${c.code}) | পঞ্চায়েত: ${c.gramPanchayat} | ${periodCaption(summary)}: ${periodLabel(summary)}`,
     S.infoCenter,
   ).height(2, 22);
 
@@ -39,7 +38,7 @@ export function buildSnpRegister(summary: MonthSummary, settings: Settings): She
     const r = first + i;
     b.height(r, 19);
     if (row.status.kind === 'holiday') {
-      for (const col of 'ACDEFGHIJKLMO') b.set(`${col}${r}`, col === 'A' ? row.day : null, S.holidayCell);
+      for (const col of 'ACDEFGHIJKLMO') b.set(`${col}${r}`, col === 'A' ? dayLabel(row, summary) : null, S.holidayCell);
       b.set(`B${r}`, holidayText(row, 'short'), S.holiday).set(`N${r}`, 'ছুটি (Holiday)', S.holiday);
       return;
     }
@@ -47,7 +46,7 @@ export function buildSnpRegister(summary: MonthSummary, settings: Settings): She
     const bold = zebra(S.cellBold, i);
     const money = zebra(S.money, i);
     const moneyBold = zebra(S.moneyBold, i);
-    b.set(`A${r}`, row.day, cell);
+    b.set(`A${r}`, dayLabel(row, summary), cell);
     if (!row.served) {
       for (const col of 'BCDEFGHIJKLMNO') b.set(`${col}${r}`, null, cell);
       return;

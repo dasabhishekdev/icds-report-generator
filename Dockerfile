@@ -9,13 +9,23 @@ RUN npm ci --no-audit --no-fund
 COPY . .
 RUN npm test && npm run build && printf '%s\n' "${GIT_SHA}" > dist/version.txt
 
-FROM node:22-alpine AS api
+# Debian base: the distro Chromium is used by Puppeteer to print the reports to PDF.
+FROM node:22-bookworm-slim AS api
 ARG GIT_SHA=unknown
 LABEL org.opencontainers.image.title="icds-report-generator-api" \
       org.opencontainers.image.revision="${GIT_SHA}"
-ENV NODE_ENV=production PORT=4000
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends chromium fonts-liberation \
+ && rm -rf /var/lib/apt/lists/* \
+ && mkdir -p /data/reports && chown node:node /data/reports
+ENV NODE_ENV=production PORT=4000 HOME=/tmp \
+    CHROME_PATH=/usr/bin/chromium \
+    FONT_DIR=/app/fonts/noto-sans-bengali \
+    REPORTS_DIR=/data/reports
 WORKDIR /app
-# The server is a single esbuild bundle, so the image needs no node_modules.
+# The server is a single esbuild bundle, so the image needs no node_modules — only the PDF font.
+COPY --from=build /app/node_modules/@fontsource/noto-sans-bengali/400.css /app/node_modules/@fontsource/noto-sans-bengali/700.css ./fonts/noto-sans-bengali/
+COPY --from=build /app/node_modules/@fontsource/noto-sans-bengali/files ./fonts/noto-sans-bengali/files
 COPY --from=build /app/dist-server/index.cjs ./index.cjs
 USER node
 EXPOSE 4000

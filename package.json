@@ -14,15 +14,15 @@
     "typecheck": "tsc -b"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1160.0",
     "@fastify/cookie": "^11.1.5",
     "@fastify/rate-limit": "^11.2.1",
     "@fontsource/noto-sans-bengali": "^5.3.0",
     "exceljs": "^4.4.0",
     "fastify": "^5.12.7",
-    "html2canvas-pro": "^2.5.0",
-    "jspdf": "^4.2.1",
     "lucide-react": "^1.64.0",
     "mongodb": "^7.7.0",
+    "puppeteer-core": "^24.43.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-router": "^7.18.5",

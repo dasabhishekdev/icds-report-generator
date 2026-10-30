@@ -13,7 +13,15 @@ import type {
 /** Every object is strict: unknown keys (including Mongo operators such as `$set`) are rejected. */
 
 export const idSchema = z.string().min(1).max(64).regex(/^[A-Za-z0-9_-]+$/);
-export const isoDateSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/);
+/** YYYY-MM-DD that exists on the calendar (rejects 2026-09-31, 2026-02-29 …). */
+export const isoDateSchema = z
+  .string()
+  .regex(/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/)
+  .refine((s) => {
+    const [y, m, d] = s.split('-').map(Number);
+    const dt = new Date(Date.UTC(y, m - 1, d));
+    return dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
+  }, 'Not a real calendar date');
 export const monthSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
 
 const text = (max: number) => z.string().max(max);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { sampleData } from '../db/sampleData';
-import { buildMonthSummary, submissionState, suggestMeal } from './month';
+import { buildMonthSummary, buildPeriodSummary, submissionState, suggestMeal } from './month';
 
 describe('September 2026 sample (AWC 547)', () => {
   const summary = buildMonthSummary('2026-09', sampleData());
@@ -79,5 +79,32 @@ describe('suggestMeal', () => {
     expect(suggestMeal('2026-09-01', days)).toBe('khichuri');
     expect(suggestMeal('2026-10-01', days)).toBe('khichuri');
     expect(suggestMeal('2026-09-30', days)).toBe('rice');
+  });
+});
+
+describe('buildPeriodSummary', () => {
+  const data = sampleData();
+
+  it('equals the month summary for a whole month', () => {
+    const range = buildPeriodSummary('2026-09-01', '2026-09-30', data);
+    expect(range.period).toMatchObject({ fullMonth: true, singleMonth: true });
+    expect(range.purchaseTotal).toBe(buildMonthSummary('2026-09', data).purchaseTotal);
+  });
+
+  it('starts the stock at the balance carried to the first day of the range', () => {
+    const month = buildMonthSummary('2026-09', data);
+    const range = buildPeriodSummary('2026-09-07', '2026-09-12', data);
+    expect(range.period.fullMonth).toBe(false);
+    expect(range.rows.map((r) => r.day)).toEqual([7, 8, 9, 10, 11, 12]);
+    expect(range.opening).toEqual(month.rows[5].closing);
+    expect(range.closing).toEqual(month.rows[11].closing);
+    expect(range.servedDays).toBe(6);
+  });
+
+  it('spans two months', () => {
+    const range = buildPeriodSummary('2026-09-28', '2026-10-03', data);
+    expect(range.period.singleMonth).toBe(false);
+    expect(range.rows.map((r) => r.date)).toEqual(['2026-09-28', '2026-09-29', '2026-09-30', '2026-10-01', '2026-10-02', '2026-10-03']);
+    expect(range.servedDays).toBe(3);
   });
 });

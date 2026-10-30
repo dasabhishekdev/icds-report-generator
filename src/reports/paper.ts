@@ -22,7 +22,13 @@ export function pageMm(paper: PaperSize, landscape: boolean): { w: number; h: nu
   return landscape ? { w: heightMm, h: widthMm } : { w: widthMm, h: heightMm };
 }
 
-/** Printable width in CSS pixels (96 dpi) inside the print margins. */
+const mmToPx = (mm: number) => Math.floor((mm / 25.4) * 96);
+
+/** Printable area in CSS pixels (96 dpi) inside the print margins. */
 export function printableWidthPx(paper: PaperSize, landscape: boolean): number {
-  return Math.floor(((pageMm(paper, landscape).w - PRINT_MARGIN_MM * 2) / 25.4) * 96);
+  return mmToPx(pageMm(paper, landscape).w - PRINT_MARGIN_MM * 2);
+}
+
+export function printableHeightPx(paper: PaperSize, landscape: boolean): number {
+  return mmToPx(pageMm(paper, landscape).h - PRINT_MARGIN_MM * 2);
 }

@@ -1,4 +1,11 @@
-import { useEffect, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from 'react';
+import {
+  useEffect,
+  useState,
+  type AnchorHTMLAttributes,
+  type ButtonHTMLAttributes,
+  type InputHTMLAttributes,
+  type ReactNode,
+} from 'react';
 import { X } from 'lucide-react';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
@@ -10,18 +17,24 @@ const VARIANT: Record<Variant, string> = {
   danger: 'bg-red-600 text-white hover:bg-red-700 active:bg-red-800',
 };
 
+const BUTTON_BASE =
+  'inline-flex min-h-10 items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50';
+
 export function Button({
   variant = 'secondary',
   className = '',
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant }) {
-  return (
-    <button
-      type="button"
-      className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${VARIANT[variant]} ${className}`}
-      {...props}
-    />
-  );
+  return <button type="button" className={`${BUTTON_BASE} ${VARIANT[variant]} ${className}`} {...props} />;
+}
+
+/** A link styled as a button — for downloads and opening files. */
+export function ButtonLink({
+  variant = 'secondary',
+  className = '',
+  ...props
+}: AnchorHTMLAttributes<HTMLAnchorElement> & { variant?: Variant }) {
+  return <a className={`${BUTTON_BASE} ${VARIANT[variant]} ${className}`} {...props} />;
 }
 
 export function Card({ title, actions, children, className = '' }: { title?: ReactNode; actions?: ReactNode; children: ReactNode; className?: string }) {

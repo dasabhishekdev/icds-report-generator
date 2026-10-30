@@ -1,15 +1,15 @@
 import type { Settings } from '../db/schema';
-import { dotted, monthShort } from '../domain/dates';
+import { dotted } from '../domain/dates';
 import type { MonthSummary } from '../domain/month';
-import { trimNum } from './common';
+import { periodSlug, trimNum } from './common';
 import { S, SheetBuilder, type SheetModel } from './sheet';
 
 export function buildNutritionVoucher(summary: MonthSummary, settings: Settings): SheetModel {
   const c = settings.center;
   const b = new SheetBuilder({
     id: 'voucher',
-    name: `Nutrition_Voucher_${monthShort(summary.month)}`,
-    fileName: `2_AWC_${c.number}_Nutrition_Voucher_${monthShort(summary.month)}`,
+    name: `Nutrition_Voucher_${periodSlug(summary)}`,
+    fileName: `2_AWC_${c.number}_Nutrition_Voucher_${periodSlug(summary)}`,
     title: 'পুষ্টি ভাউচার (Nutrition Voucher)',
     colWidths: [12, 28, 16, 18, 24, 22],
     landscape: false,

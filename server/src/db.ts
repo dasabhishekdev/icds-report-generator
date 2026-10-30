@@ -16,6 +16,32 @@ export interface SessionDoc {
   expiresAt: Date;
 }
 
+export interface ReportFile {
+  kind: 'pdf' | 'xlsx';
+  key: string;
+  name: string;
+  size: number;
+  contentType: string;
+}
+
+/** A generated month of reports; the files live in S3 (or the disk fallback) under the user's prefix. */
+export interface ReportDoc {
+  _id: ObjectId;
+  userId: ObjectId;
+  /** Month of `from`; reports are listed by it. */
+  month: string;
+  /** Inclusive period; absent on reports saved before date ranges existed (whole month). */
+  from?: string;
+  to?: string;
+  /** Registers included; absent means all four. */
+  sheets?: ('fuel' | 'voucher' | 'snp' | 'stock')[];
+  paper: 'A4' | 'A3';
+  createdAt: Date;
+  storage: 's3' | 'disk';
+  files: ReportFile[];
+  summary: { servedDays: number; beneficiaryDays: number; purchaseTotal: number; fuelTotal: number };
+}
+
 /** Every application document carries its owner; all queries filter on userId. */
 type Owned<T> = T & { userId: ObjectId };
 
@@ -28,6 +54,7 @@ export interface Collections {
   days: Collection<Owned<DayRecord>>;
   receipts: Collection<Owned<StockReceipt>>;
   monthMetas: Collection<Owned<MonthMeta>>;
+  reports: Collection<ReportDoc>;
 }
 
 export function collections(db: Db): Collections {
@@ -40,6 +67,7 @@ export function collections(db: Db): Collections {
     days: db.collection('days'),
     receipts: db.collection('receipts'),
     monthMetas: db.collection('monthMetas'),
+    reports: db.collection('reports'),
   };
 }
 
@@ -56,6 +84,7 @@ export async function ensureIndexes(c: Collections): Promise<void> {
     c.days.createIndex({ userId: 1, presentIds: 1 }),
     c.receipts.createIndex({ userId: 1, id: 1 }, { unique: true }),
     c.monthMetas.createIndex({ userId: 1, month: 1 }, { unique: true }),
+    c.reports.createIndex({ userId: 1, month: 1, createdAt: -1 }),
   ]);
 }
 

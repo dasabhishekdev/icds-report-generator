@@ -58,6 +58,19 @@ export function shiftMonth(month: string, delta: number): string {
   return addMonths(`${month}-01`, delta).slice(0, 7);
 }
 
+/** Inclusive list of dates from `from` to `to` (empty when to < from). */
+export function dateRange(from: string, to: string): string[] {
+  const out: string[] = [];
+  for (let d = from; d <= to; d = addDays(d, 1)) out.push(d);
+  return out;
+}
+
+export function daysBetweenInclusive(from: string, to: string): number {
+  const a = parseIso(from);
+  const b = parseIso(to);
+  return Math.round((Date.UTC(b.y, b.m - 1, b.d) - Date.UTC(a.y, a.m - 1, a.d)) / 86_400_000) + 1;
+}
+
 export function lastDateOfMonth(month: string): string {
   return `${month}-${pad(daysInMonth(month))}`;
 }

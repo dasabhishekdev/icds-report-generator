@@ -94,6 +94,13 @@ export function AttendancePage() {
     void save({ status: 'working', presentIds: [...next] });
   };
   const allMembers = groups.flatMap((g) => g.members);
+  /** People added later than this date are hidden here; backfilling an earlier month needs them enrolled. */
+  const notYetEnrolled = beneficiaries.filter(
+    (b) => date < b.enrolledOn && (!b.exitedOn || date < b.exitedOn) && (b.kind !== 'child' || b.dob <= date),
+  );
+  const enrollFromDate = async () => {
+    for (const b of notYetEnrolled) await dataApi.saveBeneficiary({ ...b, enrolledOn: date });
+  };
 
   return (
     <div className="space-y-4">
@@ -185,6 +192,16 @@ export function AttendancePage() {
 
       {open && (
         <>
+          {notYetEnrolled.length > 0 && (
+            <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-sky-50 px-4 py-3 text-sm text-sky-900 ring-1 ring-sky-200">
+              <span className="min-w-0 flex-1">
+                <b>{notYetEnrolled.length}</b> {t('notEnrolledYet')}: {notYetEnrolled.map((b) => b.name).join(', ')}
+              </span>
+              <Button variant="primary" className="shrink-0" onClick={() => void enrollFromDate()}>
+                {t('enrollFromDate')}
+              </Button>
+            </div>
+          )}
           <div className="grid grid-cols-3 gap-2">
             <Stat label={t('mothers')} value={counts.mothers} tone="rose" />
             <Stat label={t('children')} value={counts.children} tone="amber" />

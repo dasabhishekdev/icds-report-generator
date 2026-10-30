@@ -11,7 +11,7 @@ import {
   type StockItemKey,
   type StockReceipt,
 } from '../db/schema';
-import { ageInMonths, lastDateOfMonth, monthDates, monthOf, shiftMonth, weekday } from './dates';
+import { addDays, ageInMonths, dateRange, lastDateOfMonth, monthDates, monthOf, parseIso, shiftMonth, weekday } from './dates';
 import { resolveCategory } from './eligibility';
 import {
   countPresent,
@@ -101,8 +101,19 @@ export interface FuelLine {
   amount: number;
 }
 
+export interface ReportPeriod {
+  from: string;
+  to: string;
+  /** Exactly one calendar month (1st to last day). */
+  fullMonth: boolean;
+  /** Both ends in the same calendar month. */
+  singleMonth: boolean;
+}
+
 export interface MonthSummary {
+  /** Month of the period start; used for month-level settings and grouping. */
   month: string;
+  period: ReportPeriod;
   rows: DayRow[];
   servedDays: number;
   firstDate: string;
@@ -178,9 +189,9 @@ function makeContext(data: AppData): Context {
   };
 }
 
-function buildRows(month: string, ctx: Context): DayRow[] {
+function buildRows(dates: readonly string[], ctx: Context): DayRow[] {
   const { settings, receipts } = ctx.data;
-  return monthDates(month).map((date, i) => {
+  return dates.map((date) => {
     const record = ctx.dayMap.get(date);
     const status = resolveDayStatus(date, record, settings);
     const working = status.kind === 'working' && record !== undefined;
@@ -195,7 +206,7 @@ function buildRows(month: string, ctx: Context): DayRow[] {
     for (const item of STOCK_ITEM_KEYS) consumption[item] = ration.total[item];
     return {
       date,
-      day: i + 1,
+      day: parseIso(date).d,
       status,
       meal,
       served: working && counts.total > 0,
@@ -250,7 +261,7 @@ export function openingStockFor(month: string, data: AppData, ctx: Context = mak
   if (earliest && earliest < month) {
     for (let m = earliest; m < month; m = shiftMonth(m, 1)) {
       balance = applyOpeningOverride(balance, metaMap.get(m));
-      balance = runLedger(buildRows(m, ctx), balance);
+      balance = runLedger(buildRows(monthDates(m), ctx), balance);
     }
   }
   return applyOpeningOverride(balance, metaMap.get(month));
@@ -273,8 +284,17 @@ function enrolledAt(date: string, ctx: Context): MonthSummary['enrolled'] {
   return e;
 }
 
-function fuelLines(month: string, beneficiaryDays: number, ctx: Context): FuelLine[] {
-  const meta = ctx.data.monthMetas.find((m) => m.month === month);
+/** Stock in hand at the start of `date`: the month's opening plus movements on earlier days of that month. */
+function openingStockAt(date: string, ctx: Context): StockQuantities {
+  const month = monthOf(date);
+  const monthOpening = openingStockFor(month, ctx.data, ctx);
+  const earlier = dateRange(`${month}-01`, addDays(date, -1));
+  return runLedger(buildRows(earlier, ctx), monthOpening);
+}
+
+/** Month overrides (manual fuel quantities) only apply when the period is that whole month. */
+function fuelLines(month: string | null, beneficiaryDays: number, ctx: Context): FuelLine[] {
+  const meta = month ? ctx.data.monthMetas.find((m) => m.month === month) : undefined;
   return ctx.data.settings.fuelItems.map((item) => {
     const o = meta?.fuelOverrides?.find((x) => x.fuelItemId === item.id);
     const quantity = o?.quantity ?? round2(item.qtyPerBeneficiaryDay * beneficiaryDays);
@@ -284,9 +304,18 @@ function fuelLines(month: string, beneficiaryDays: number, ctx: Context): FuelLi
 }
 
 export function buildMonthSummary(month: string, data: AppData): MonthSummary {
+  return buildPeriodSummary(`${month}-01`, lastDateOfMonth(month), data);
+}
+
+/** Summary for any inclusive date range; a whole month is the usual case. */
+export function buildPeriodSummary(from: string, to: string, data: AppData): MonthSummary {
+  if (to < from) throw new Error('End date is before start date');
   const ctx = makeContext(data);
-  const rows = buildRows(month, ctx);
-  const opening = openingStockFor(month, data, ctx);
+  const month = monthOf(from);
+  const singleMonth = monthOf(to) === month;
+  const period: ReportPeriod = { from, to, singleMonth, fullMonth: singleMonth && from === `${month}-01` && to === lastDateOfMonth(month) };
+  const rows = buildRows(dateRange(from, to), ctx);
+  const opening = period.fullMonth ? openingStockFor(month, data, ctx) : openingStockAt(from, ctx);
   const closing = runLedger(rows, opening);
   const served = rows.filter((r) => r.served);
   const totals = { counts: sumCounts(rows), ration: sumRations(rows), costs: sumCosts(rows) };
@@ -310,23 +339,23 @@ export function buildMonthSummary(month: string, data: AppData): MonthSummary {
     chatu: purchaseLine(totals.ration.total.chatu, rates.chatu, rates.chatu / 1000),
   };
   const purchaseTotal = round2(purchase.egg.cost + purchase.veg.cost + purchase.potato.cost + purchase.chatu.cost);
-  const lastDate = lastDateOfMonth(month);
-  const fuel = fuelLines(month, totals.counts.total, ctx);
+  const fuel = fuelLines(period.fullMonth ? month : null, totals.counts.total, ctx);
 
   return {
     month,
+    period,
     rows,
     servedDays: served.length,
-    firstDate: `${month}-01`,
-    lastDate,
+    firstDate: from,
+    lastDate: to,
     totals,
     meals,
     purchase,
     purchaseTotal,
     opening,
     closing,
-    receipts: data.receipts.filter((r) => monthOf(r.date) === month).sort((a, b) => (a.date < b.date ? -1 : 1)),
-    enrolled: enrolledAt(lastDate, ctx),
+    receipts: data.receipts.filter((r) => r.date >= from && r.date <= to).sort((a, b) => (a.date < b.date ? -1 : 1)),
+    enrolled: enrolledAt(to, ctx),
     beneficiaryDays: totals.counts.total,
     fuel,
     fuelTotal: round2(fuel.reduce((s, f) => s + f.amount, 0)),

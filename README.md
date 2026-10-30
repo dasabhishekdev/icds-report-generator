@@ -4,12 +4,22 @@ Multi-user web platform for Anganwadi centres: daily attendance with submit/chec
 
 Each worker registers their own account. A new account receives the default injection — per-head norms, rates, age categories and fuel items derived from the AWC 547 September 2026 registers — while the centre name, number and worker name are their own. Data is stored per user in MongoDB; every query is scoped to the signed-in user.
 
+## Reports
+
+Reports → choose **Whole month** or a **Date range** (up to 93 days), A4 or A3, then:
+
+- **Generate & save PDF + Excel** — all four registers; the PDF downloads immediately.
+- **This report as PDF** (on the preview) — only the register being previewed.
+
+Generation runs on the server from the saved data: the registers are built by the same code as the on-screen preview, printed to a vector PDF by headless Chromium (Puppeteer, Bengali font embedded) and written to Excel with live formulas. Every generation is stored for the user — `<S3_PREFIX>/users/<userId>/<YYYY-MM>/<reportId>/…` in S3, or the `icds-reports-data` volume when `S3_BUCKET` is empty — and listed under **Saved reports** by month with Download, Open / Print and Delete.
+
 ## Architecture
 
 | Part | Where | Notes |
 |------|-------|-------|
 | SPA (React + Vite + Tailwind, PWA) | `src/` | Calculation engine and report builders run in the browser |
 | API (Fastify + MongoDB driver) | `server/` | Cookie sessions, scrypt passwords, strict zod validation, per-user collections |
+| Report service | `server/src/reports/` | Puppeteer PDF (`pdf.ts`), print document (`document.ts`), S3/disk storage (`storage.ts`), routes |
 | Containers | `Dockerfile`, `docker-compose.yml` | `icds-web` (nginx, joins network `web`), `icds-api` and `icds-mongo` on private `icds-internal` |
 
 Public routing for `icds.educoreva.com` lives in the hosting repo (`nginx/conf.d/icds.conf`) and points at `icds-web:8080`, which serves the app and proxies `/api` to the API.
@@ -21,7 +31,9 @@ npm ci
 docker run -d --name icds-dev-mongo -p 127.0.0.1:27017:27017 mongo:7
 MONGO_URL=mongodb://127.0.0.1:27017/icds COOKIE_SECURE=false npm run dev:api   # API on :4000
 npm run dev                                                                    # app on :5173, proxies /api
-MONGO_URL=mongodb://127.0.0.1:27017 npm test   # engine/report tests + API tests (API tests skip without MONGO_URL)
+MONGO_URL=mongodb://127.0.0.1:27017 npm test   # engine/report tests + API tests (API tests skip without MONGO_URL;
+                                               # PDF tests use local Chrome/Chromium or CHROME_PATH;
+                                               # S3 tests run only with S3_TEST_ENDPOINT, e.g. adobe/s3mock)
 npm run build                                  # dist/ (app) and dist-server/index.cjs (API bundle)
 ```
 
@@ -69,3 +81,5 @@ bash scripts/backup-mongo.sh    # gzip dump into backups/, keeps 30 days (schedu
 ```
 
 Set `ALLOW_REGISTRATION=false` in `.env` and redeploy to stop new sign-ups.
+
+Report storage: set `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID` and `S3_SECRET_ACCESS_KEY` in `.env` (plus `S3_ENDPOINT` / `S3_FORCE_PATH_STYLE=true` for S3-compatible services such as Cloudflare R2) and redeploy. The IAM user only needs `s3:PutObject`, `s3:GetObject` and `s3:DeleteObject` on `arn:aws:s3:::<bucket>/<S3_PREFIX>/*`. Without `S3_BUCKET`, reports are kept in the `icds-reports-data` volume.
