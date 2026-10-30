@@ -9,5 +9,7 @@ tmp
 *.log
 .DS_Store
 .env
+.env.*
+!.env.example
 dist-server
 backups

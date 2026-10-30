@@ -7,5 +7,7 @@ dev-dist
 .playwright-mcp
 tmp
 .env
+.env.*
+!.env.example
 dist-server
 backups
