@@ -13,6 +13,16 @@ Reports → choose **Whole month** or a **Date range** (up to 93 days), A4 or A3
 
 Generation runs on the server from the saved data: the registers are built by the same code as the on-screen preview, printed to a vector PDF by headless Chromium (Puppeteer, Bengali font embedded) and written to Excel with live formulas. Every generation is stored for the user — `<S3_PREFIX>/users/<userId>/<YYYY-MM>/<reportId>/…` in S3, or the `icds-reports-data` volume when `S3_BUCKET` is empty — and listed under **Saved reports** by month with Download, Open / Print and Delete.
 
+## Jan Andolan photos and the Poshan portal
+
+**Jan Andolan** (sixth tab, also a shortcut on the installed app icon) prepares activity photos for the Poshan Abhiyaan portal, which accepts PNG/JPEG up to 2 MB. Choose any photo up to 30 MB:
+
+- It is reduced **on the phone** (Web Worker, `src/lib/compressImage.worker.ts`) to at most 1.5 MB: full resolution at the highest JPEG quality that fits (≥ 0.80), otherwise just enough downscaling, never below 1920 px on the longest side. JPEG/PNG photos already under 1.5 MB are kept unchanged. The search is `chooseEncoding` in `src/lib/imageEncoding.ts`.
+- The result downloads automatically as `AWC_<centre>_JanAndolan_<YYYY-MM-DD>_<HHmm>.jpg` and is saved with a thumbnail at `<S3_PREFIX>/users/<userId>/photos/<YYYY-MM>/<photoId>/…` (or the reports volume). **Saved photos** lists them by month.
+- The portal card shows the worker's portal username and password with copy buttons and opens the portal login or the submission page (`/addactivityparticipation`) in a new tab. The worker fills in the portal form themselves; the app does not automate the portal.
+
+The portal login is entered in Settings → **Poshan portal login** and stored in the `portalLogins` collection, the password AES-256-GCM-encrypted with `PORTAL_SECRET` (64 hex characters; `scripts/deploy.sh` generates it when `.env` has none). Without `PORTAL_SECRET` the card says saving is not available. Changing the key makes saved portal passwords unreadable; workers then enter them again.
+
 ## Holidays and age categories
 
 West Bengal publishes its holiday list only as a yearly Finance (Audit) Department PDF, so there is no official API. The server (`server/src/holidays/`) downloads each year from a keyless iCal transcription of the notification (List-I and List-II), falls back to the India Calendar API (List-I only), caches it in the `holidayCalendars` collection, and re-checks this and next year every few hours — a new year appears automatically once it is published. The 2026 list is built in for offline use. In Settings each centre chooses all govt holidays, List-I only, or off, and can mark any state holiday "Not a holiday". Set `HOLIDAY_SYNC=false` for servers without internet.
@@ -35,7 +45,7 @@ Public routing for `icds.educoreva.com` lives in the hosting repo (`nginx/conf.d
 ```bash
 npm ci
 docker run -d --name icds-dev-mongo -p 127.0.0.1:27017:27017 mongo:7
-MONGO_URL=mongodb://127.0.0.1:27017/icds COOKIE_SECURE=false npm run dev:api   # API on :4000
+MONGO_URL=mongodb://127.0.0.1:27017/icds COOKIE_SECURE=false PORTAL_SECRET=$(openssl rand -hex 32) npm run dev:api   # API on :4000
 npm run dev                                                                    # app on :5173, proxies /api
 MONGO_URL=mongodb://127.0.0.1:27017 npm test   # engine/report tests + API tests (API tests skip without MONGO_URL;
                                                # PDF tests use local Chrome/Chromium or CHROME_PATH;
