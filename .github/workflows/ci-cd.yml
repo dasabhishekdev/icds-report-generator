@@ -1,11 +1,11 @@
 name: CI/CD
 
-# main: verify only. master: verify, then deploy to production.
+# Only master: verify, then deploy to production.
 on:
   push:
-    branches: [main, master]
+    branches: [master]
   pull_request:
-    branches: [main, master]
+    branches: [master]
   workflow_dispatch:
 
 concurrency:
