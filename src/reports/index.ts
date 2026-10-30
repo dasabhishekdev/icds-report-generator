@@ -5,9 +5,9 @@ import { buildNutritionVoucher } from './nutritionVoucher';
 import { buildSnpRegister } from './snpRegister';
 import { buildStockRegister } from './stockRegister';
 import type { SheetModel } from './sheet';
+import { REPORT_IDS, type ReportId } from './titles';
 
-export const REPORT_IDS = ['fuel', 'voucher', 'snp', 'stock'] as const;
-export type ReportId = (typeof REPORT_IDS)[number];
+export { REPORT_IDS, REPORT_TITLES, type ReportId } from './titles';
 
 const BUILDERS: Record<ReportId, (summary: MonthSummary, settings: Settings) => SheetModel> = {
   fuel: buildFuelSpices,

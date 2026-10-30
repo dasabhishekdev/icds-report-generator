@@ -2,6 +2,7 @@ import type { Settings } from '../db/schema';
 import type { MonthSummary } from '../domain/month';
 import { dayLabel, holidayText, periodCaption, periodLabel, periodSlug, splitRupees } from './common';
 import { blankZero, S, SheetBuilder, zebra, type SheetModel } from './sheet';
+import { REPORT_TITLES } from './titles';
 
 export function buildFuelSpices(summary: MonthSummary, settings: Settings): SheetModel {
   const c = settings.center;
@@ -9,7 +10,7 @@ export function buildFuelSpices(summary: MonthSummary, settings: Settings): Shee
     id: 'fuel',
     name: `Fuel_Spices_${periodSlug(summary)}`,
     fileName: `1_AWC_${c.number}_Fuel_Spices_${periodSlug(summary)}`,
-    title: 'জ্বালানী ও মশলা খরচ (Fuel & Spices)',
+    title: REPORT_TITLES.fuel,
     colWidths: [12, 16, 16, 15, 16, 14, 16, 16, 26],
     landscape: false,
   });

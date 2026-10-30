@@ -4,6 +4,7 @@ import { dotted } from '../domain/dates';
 import type { MonthSummary } from '../domain/month';
 import { STOCK_LABEL, STOCK_LABEL_EN, dayLabel, holidayText, mealLabel, periodLabel, periodSlug, stockUnit, trimNum } from './common';
 import { addr, blankZero, colLetter, S, SheetBuilder, zebra, type SheetModel } from './sheet';
+import { REPORT_TITLES } from './titles';
 
 /** First column (1-based) of each stock item's receipt / consumption / balance triple. */
 const STOCK_COL: Record<StockItemKey, number> = { chatu: 18, rice: 21, dal: 24, oil: 27, salt: 30 };
@@ -15,7 +16,7 @@ export function buildStockRegister(summary: MonthSummary, settings: Settings): S
     id: 'stock',
     name: `Stock_Consumption_${periodSlug(summary)}`,
     fileName: `4_AWC_${c.number}_Stock_Consumption_Register_${periodSlug(summary)}`,
-    title: 'মজুত ও খরচ রেজিস্টার (Stock)',
+    title: REPORT_TITLES.stock,
     colWidths: [12, 12, ...Array(30).fill(11)],
     landscape: true,
   });

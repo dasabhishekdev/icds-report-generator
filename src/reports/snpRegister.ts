@@ -2,6 +2,7 @@ import type { Settings } from '../db/schema';
 import type { MonthSummary } from '../domain/month';
 import { dayLabel, holidayText, inr, mealLabel, periodCaption, periodLabel, periodSlug, splitRupees } from './common';
 import { blankZero, S, SheetBuilder, zebra, type SheetModel } from './sheet';
+import { REPORT_TITLES } from './titles';
 
 export function buildSnpRegister(summary: MonthSummary, settings: Settings): SheetModel {
   const c = settings.center;
@@ -9,7 +10,7 @@ export function buildSnpRegister(summary: MonthSummary, settings: Settings): She
     id: 'snp',
     name: `SNP_Veg_Egg_${periodSlug(summary)}`,
     fileName: `3_AWC_${c.number}_SNP_Veg_Egg_Register_${periodSlug(summary)}`,
-    title: 'সবজী ও ডিম রেজিস্টার (SNP)',
+    title: REPORT_TITLES.snp,
     colWidths: [10, 14, 12, 12, 12, 14, 14, 14, 12, 14, 16, 14, 14, 18, 16],
     landscape: true,
   });

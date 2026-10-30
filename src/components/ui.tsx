@@ -41,7 +41,7 @@ export function Card({ title, actions, children, className = '' }: { title?: Rea
   return (
     <section className={`rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 ${className}`}>
       {(title || actions) && (
-        <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           {title && <h2 className="text-base font-bold text-slate-800">{title}</h2>}
           {actions}
         </div>

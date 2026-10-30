@@ -1,24 +1,23 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, Cloud, FileDown, FileSpreadsheet, HardDrive, Loader2, Maximize2, Printer, Sparkles, Trash2 } from 'lucide-react';
+import { Link } from 'react-router';
+import { AlertTriangle, ChevronRight, FileDown, FolderOpen, Loader2, Maximize2, Sparkles } from 'lucide-react';
 import { dataApi } from '../api/data';
 import { reportError } from '../api/http';
-import { downloadReportFile, reportsApi, type GenerateRequest, type StoredReport } from '../api/reports';
+import { downloadReportFile, reportsApi, type GenerateRequest } from '../api/reports';
 import type { PaperSize } from '../db/schema';
 import { currentMonth, daysBetweenInclusive, dotted, lastDateOfMonth, monthLabel, monthOf, todayIso } from '../domain/dates';
 import { buildMonthSummary, buildPeriodSummary } from '../domain/month';
-import { buildAllReports, REPORT_IDS, type ReportId } from '../reports';
+import { buildAllReports, type ReportId } from '../reports';
 import { PAPER_SIZES } from '../reports/paper';
-import { rupees } from '../lib/format';
+import { periodText as formatPeriod, rupees } from '../lib/format';
 import { useApp } from '../state/AppDataContext';
 import { SheetPreview, sheetWidthPx } from '../components/SheetPreview';
-import { Button, ButtonLink, Card, Field, Flash, Segmented, Stat, TextInput, useFlash } from '../components/ui';
+import { Button, Card, Field, Flash, Segmented, Stat, TextInput, useFlash } from '../components/ui';
 import { MonthSwitcher } from './MonthPage';
 
-type Scope = 'month' | 'all';
 type Mode = 'month' | 'range';
 
 const MAX_RANGE_DAYS = 93;
-const kb = (bytes: number) => `${Math.max(1, Math.round(bytes / 1024))} KB`;
 
 export function ReportsPage() {
   const { data, t, lang } = useApp();
@@ -47,13 +46,11 @@ export function ReportsPage() {
     [mode, month, from, to, rangeError, listMonth, data],
   );
   const reports = useMemo(() => buildAllReports(summary, data.settings), [summary, data.settings]);
-  const titleOf = (id: ReportId) => reports.find((r) => r.id === id)?.title ?? id;
 
   const [active, setActive] = useState(0);
   const [fit, setFit] = useState(true);
   const [busy, setBusy] = useState<'all' | ReportId | null>(null);
-  const [scope, setScope] = useState<Scope>('month');
-  const [saved, setSaved] = useState<StoredReport[] | null>(null);
+  const [savedCount, setSavedCount] = useState<number | null>(null);
   const [latestId, setLatestId] = useState<string | null>(null);
   const [flash, setFlash] = useFlash();
   const previewBox = useRef<HTMLDivElement>(null);
@@ -67,19 +64,18 @@ export function ReportsPage() {
     return () => ro.disconnect();
   }, []);
 
-  const refresh = useCallback(async () => {
+  const refreshCount = useCallback(async () => {
     try {
-      setSaved(await reportsApi.list(scope === 'month' ? listMonth : undefined));
-    } catch (e) {
-      reportError(e);
-      setSaved([]);
+      setSavedCount((await reportsApi.list(listMonth)).length);
+    } catch {
+      setSavedCount(null);
     }
-  }, [listMonth, scope]);
+  }, [listMonth]);
 
   useEffect(() => {
-    setSaved(null);
-    void refresh();
-  }, [refresh]);
+    setSavedCount(null);
+    void refreshCount();
+  }, [refreshCount]);
 
   /** Generates on the server, saves it for the month and downloads the PDF straight away. */
   async function generate(sheets?: ReportId[]) {
@@ -91,21 +87,11 @@ export function ReportsPage() {
       setLatestId(report.id);
       setFlash(t('reportGenerated'));
       downloadReportFile(report.id, 'pdf');
-      await refresh();
+      await refreshCount();
     } catch (e) {
       reportError(e);
     } finally {
       setBusy(null);
-    }
-  }
-
-  async function remove(r: StoredReport) {
-    if (!confirm(t('deleteReportConfirm'))) return;
-    try {
-      await reportsApi.remove(r.id);
-      await refresh();
-    } catch (e) {
-      reportError(e);
     }
   }
 
@@ -114,10 +100,7 @@ export function ReportsPage() {
   const drafts = summary.rows.filter((r) => r.served && !r.submitted);
   const current = reports[active];
   const zoom = fit && boxWidth ? Math.min(1, boxWidth / sheetWidthPx(current)) : 1;
-  const when = (iso: string) =>
-    new Date(iso).toLocaleString(lang === 'bn' ? 'bn-IN' : 'en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
-  const periodText = (p: { from: string; to: string }) =>
-    p.from === `${monthOf(p.from)}-01` && p.to === lastDateOfMonth(monthOf(p.from)) ? monthLabel(monthOf(p.from), lang) : `${dotted(p.from)} – ${dotted(p.to)}`;
+  const periodText = (p: { from: string; to: string }) => formatPeriod(p, lang);
   const dayList = (rows: typeof summary.rows) => rows.map((r) => (summary.period.singleMonth ? r.day : dotted(r.date).slice(0, 5))).join(', ');
 
   return (
@@ -206,64 +189,21 @@ export function ReportsPage() {
         </Button>
       </Card>
 
-      <Card
-        title={t('savedReports')}
-        actions={
-          <Segmented
-            value={scope}
-            onChange={setScope}
-            options={[
-              { value: 'month', label: monthLabel(listMonth, lang) },
-              { value: 'all', label: t('allMonths') },
-            ]}
-          />
-        }
+      <Link
+        to={`/reports/saved?month=${listMonth}${latestId ? `&highlight=${latestId}` : ''}`}
+        className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 transition hover:bg-slate-50"
       >
-        {saved === null ? (
-          <div className="flex items-center gap-2 text-sm text-slate-500">
-            <Loader2 size={16} className="animate-spin" /> {t('preparing')}
-          </div>
-        ) : saved.length === 0 ? (
-          <p className="text-sm text-slate-500">{t('noSavedReports')}</p>
-        ) : (
-          <ul className="space-y-2">
-            {saved.map((r) => (
-              <li
-                key={r.id}
-                className={`rounded-xl p-3 ring-1 ${r.id === latestId ? 'bg-teal-50 ring-teal-300' : 'bg-slate-50 ring-slate-200'}`}
-              >
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                  <span className="font-bold text-slate-900">{periodText(r)}</span>
-                  <span className="rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">{r.paper}</span>
-                  <span className="text-xs text-slate-500">{when(r.createdAt)}</span>
-                  <span className="flex items-center gap-1 text-xs text-slate-400">
-                    {r.storage === 's3' ? <Cloud size={14} /> : <HardDrive size={14} />}
-                    {r.storage === 's3' ? 'S3' : t('storedOnServer')}
-                  </span>
-                </div>
-                <div className="mt-1 text-xs text-slate-600">
-                  {r.sheets.length === REPORT_IDS.length ? t('allFourRegisters') : r.sheets.map(titleOf).join(', ')} · {t('cookingDays')}:{' '}
-                  {r.summary.servedDays} · {t('vegEggCost')}: {rupees(r.summary.purchaseTotal)}
-                </div>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <ButtonLink variant="primary" href={reportsApi.fileUrl(r.id, 'pdf')} download>
-                    <FileDown size={16} /> PDF ({kb(r.files.find((f) => f.kind === 'pdf')?.size ?? 0)})
-                  </ButtonLink>
-                  <ButtonLink href={reportsApi.fileUrl(r.id, 'xlsx')} download>
-                    <FileSpreadsheet size={16} /> Excel
-                  </ButtonLink>
-                  <ButtonLink href={reportsApi.fileUrl(r.id, 'pdf', true)} target="_blank" rel="noopener">
-                    <Printer size={16} /> {t('openPrint')}
-                  </ButtonLink>
-                  <Button variant="ghost" className="text-red-600" onClick={() => void remove(r)} aria-label={t('delete')}>
-                    <Trash2 size={16} />
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-700">
+          <FolderOpen size={22} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block font-bold text-slate-900">{t('viewSavedReports')}</span>
+          <span className="block text-sm text-slate-500">
+            {savedCount === null ? '…' : savedCount} {t('savedThisMonth')} · {monthLabel(listMonth, lang)}
+          </span>
+        </span>
+        <ChevronRight size={20} className="text-slate-400" />
+      </Link>
 
       <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-1 md:mx-0 md:px-0">
         {reports.map((r, i) => (

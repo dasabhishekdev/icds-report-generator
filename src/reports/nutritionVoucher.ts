@@ -3,6 +3,7 @@ import { dotted } from '../domain/dates';
 import type { MonthSummary } from '../domain/month';
 import { periodSlug, trimNum } from './common';
 import { S, SheetBuilder, type SheetModel } from './sheet';
+import { REPORT_TITLES } from './titles';
 
 export function buildNutritionVoucher(summary: MonthSummary, settings: Settings): SheetModel {
   const c = settings.center;
@@ -10,7 +11,7 @@ export function buildNutritionVoucher(summary: MonthSummary, settings: Settings)
     id: 'voucher',
     name: `Nutrition_Voucher_${periodSlug(summary)}`,
     fileName: `2_AWC_${c.number}_Nutrition_Voucher_${periodSlug(summary)}`,
-    title: 'পুষ্টি ভাউচার (Nutrition Voucher)',
+    title: REPORT_TITLES.voucher,
     colWidths: [12, 28, 16, 18, 24, 22],
     landscape: false,
   });

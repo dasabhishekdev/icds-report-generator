@@ -5,6 +5,7 @@ import { AttendancePage } from './pages/AttendancePage';
 import { BeneficiariesPage } from './pages/BeneficiariesPage';
 import { MonthPage } from './pages/MonthPage';
 import { ReportsPage } from './pages/ReportsPage';
+import { SavedReportsPage } from './pages/SavedReportsPage';
 import { SettingsPage } from './pages/SettingsPage';
 
 export function App() {
@@ -17,6 +18,7 @@ export function App() {
             <Route path="month" element={<MonthPage />} />
             <Route path="people" element={<BeneficiariesPage />} />
             <Route path="reports" element={<ReportsPage />} />
+            <Route path="reports/saved" element={<SavedReportsPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
         </Routes>
