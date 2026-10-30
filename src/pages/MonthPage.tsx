@@ -68,7 +68,7 @@ export function MonthPage() {
 }
 
 function CalendarGrid({ summary }: { summary: MonthSummary }) {
-  const { lang, t } = useApp();
+  const { lang, t, label } = useApp();
   const navigate = useNavigate();
   const lead = weekday(summary.firstDate);
   const today = todayIso();
@@ -112,7 +112,7 @@ function CalendarGrid({ summary }: { summary: MonthSummary }) {
                 <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500" title={t('draft')} />
               )}
               <span className="text-sm font-bold">{row.day}</span>
-              {holiday && <span className="max-w-full truncate text-[10px]">{row.status.label ?? t('holiday')}</span>}
+              {holiday && <span className="max-w-full truncate text-[10px]">{row.status.label ? label(row.status.label) : t('holiday')}</span>}
               {row.served && (
                 <span className="text-[10px] font-semibold sm:text-xs">
                   {row.meal === 'khichuri' ? '🍲' : '🍚'} {row.counts.total}
@@ -295,7 +295,7 @@ function ReceiptsCard({ summary }: { summary: MonthSummary }) {
 }
 
 function FuelPanel({ summary }: { summary: MonthSummary }) {
-  const { t, data } = useApp();
+  const { t, data, label } = useApp();
   const meta = data.monthMetas.find((m) => m.month === summary.month);
   const saved = meta?.fuelOverrides ?? [];
   const [draft, setDraft] = useState<FuelLineOverride[]>(saved);
@@ -342,7 +342,7 @@ function FuelPanel({ summary }: { summary: MonthSummary }) {
           {lines.map((line) => (
             <div key={line.id} className="rounded-xl bg-slate-50 p-3">
               <div className="mb-2 flex items-center justify-between gap-2">
-                <span className="font-semibold text-slate-800">{line.name}</span>
+                <span className="font-semibold text-slate-800">{label(line.name)}</span>
                 {line.overridden && (
                   <button type="button" className="flex items-center gap-1 text-xs font-semibold text-teal-700" onClick={() => setLine(line.id, null)}>
                     <RotateCcw size={14} /> {t('reset')}

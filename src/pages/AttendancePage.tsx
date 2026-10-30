@@ -40,7 +40,7 @@ function ReasonForm({ initial, onSave }: { initial: string; onSave: (v: string) 
 }
 
 export function AttendancePage() {
-  const { data, t, lang } = useApp();
+  const { data, t, lang, label } = useApp();
   const { settings, categories, beneficiaries, days } = data;
   const [params, setParams] = useSearchParams();
   const date = params.get('date') ?? todayIso();
@@ -169,7 +169,7 @@ export function AttendancePage() {
           <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl bg-orange-50 px-3 py-2 text-sm text-orange-900 ring-1 ring-orange-200">
             <span className="min-w-0 flex-1">
               <span className="mr-1 rounded-full bg-orange-200 px-2 py-0.5 text-xs font-semibold">{t('stateHolidayTag')}</span>
-              {status.label}
+              {status.label && label(status.label)}
             </span>
             <Button className="shrink-0" onClick={() => void openOnStateHoliday()}>
               <CalendarCheck size={16} /> {t('markOpen')}
@@ -260,7 +260,7 @@ export function AttendancePage() {
                     key={category.id}
                     title={
                       <span>
-                        {category.name}{' '}
+                        {label(category.name)}{' '}
                         <span className="ml-1 rounded-full bg-slate-100 px-2 py-0.5 text-sm font-semibold text-slate-600">
                           {n}/{members.length}
                         </span>
@@ -366,7 +366,7 @@ export function AttendancePage() {
             const n = members.filter((m) => present.has(m.id)).length;
             return (
               <li key={category.id} className="flex items-center justify-between px-3 py-2 text-sm">
-                <span className="text-slate-700">{category.name}</span>
+                <span className="text-slate-700">{label(category.name)}</span>
                 <span className="font-semibold tabular-nums text-slate-900">
                   {n}
                   <span className="font-normal text-slate-400">

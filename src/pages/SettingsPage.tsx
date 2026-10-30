@@ -47,7 +47,8 @@ export function SettingsPage() {
     <div className="space-y-4">
       <h1 className="text-xl font-bold text-slate-900">{t('navSettings')}</h1>
       <AccountCard onDone={(msg) => setFlash(msg)} />
-      <GeneralCard key={nursingMonths} onSaved={saved} />
+      <LanguageCard />
+      <NursingPeriodCard key={nursingMonths} onSaved={saved} />
       <CentreCard key={JSON.stringify(center)} onSaved={saved} />
       <RatesCard key={JSON.stringify(rates)} onSaved={saved} />
       <CategoriesCard />
@@ -81,7 +82,7 @@ function AccountCard({ onDone }: { onDone: (msg: string) => void }) {
   }
 
   return (
-    <Card title={t('account')}>
+    <Card title={t('account')} hint={t('hintAccount')}>
       <div className="flex flex-wrap items-center gap-3">
         <span className="flex h-11 w-11 items-center justify-center rounded-full bg-teal-50 text-teal-700">
           <UserRound size={22} />
@@ -124,40 +125,48 @@ function AccountCard({ onDone }: { onDone: (msg: string) => void }) {
   );
 }
 
-function GeneralCard({ onSaved }: { onSaved: (ok: boolean) => void }) {
+function LanguageCard() {
   const { t, data } = useApp();
-  const [nursingMonths, setNursingMonths] = useState<number | undefined>(data.settings.nursingMonths);
-  const valid = nursingMonths !== undefined && Number.isInteger(nursingMonths) && nursingMonths > 0;
-  const dirty = nursingMonths !== data.settings.nursingMonths;
   const setLanguage = (language: Language) => {
     if (language !== data.settings.language) void saveSettings({ language });
   };
   return (
-    <Card title={t('general')}>
+    <Card title={t('language')} hint={t('hintLanguage')}>
+      <Segmented
+        value={data.settings.language}
+        onChange={setLanguage}
+        options={[
+          { value: 'bn', label: 'বাংলা' },
+          { value: 'en', label: 'English' },
+        ]}
+      />
+    </Card>
+  );
+}
+
+function NursingPeriodCard({ onSaved }: { onSaved: (ok: boolean) => void }) {
+  const { t, data } = useApp();
+  const [nursingMonths, setNursingMonths] = useState<number | undefined>(data.settings.nursingMonths);
+  const valid = nursingMonths !== undefined && Number.isInteger(nursingMonths) && nursingMonths > 0;
+  const dirty = nursingMonths !== data.settings.nursingMonths;
+  return (
+    <Card title={t('nursingMonths')} hint={t('nursingHint')}>
       <form
         onSubmit={(e) => {
           e.preventDefault();
           if (valid) void saveSettings({ nursingMonths }).then(onSaved);
         }}
       >
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label={t('language')}>
-            <Segmented
-              value={data.settings.language}
-              onChange={setLanguage}
-              options={[
-                { value: 'bn', label: 'বাংলা' },
-                { value: 'en', label: 'English' },
-              ]}
-            />
-          </Field>
-          <Field label={t('nursingMonths')}>
-            <NumberInput value={nursingMonths} step="1" onChange={setNursingMonths} />
-          </Field>
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="w-32">
+            <Field label={t('months')}>
+              <NumberInput value={nursingMonths} step="1" onChange={setNursingMonths} />
+            </Field>
+          </div>
+          <Button type="submit" variant="primary" disabled={!valid || !dirty}>
+            {t('save')}
+          </Button>
         </div>
-        <Button type="submit" variant="primary" className="mt-4" disabled={!valid || !dirty}>
-          {t('save')}
-        </Button>
       </form>
     </Card>
   );
@@ -179,7 +188,7 @@ function CentreCard({ onSaved }: { onSaved: (ok: boolean) => void }) {
   const { t, data } = useApp();
   const [center, setCenter] = useState(data.settings.center);
   return (
-    <Card title={t('centreInfo')}>
+    <Card title={t('centreInfo')} hint={t('hintCentre')}>
       <div className="grid gap-3 sm:grid-cols-2">
         {CENTRE_FIELDS.map(({ key, label }) => (
           <Field key={key} label={t(label)}>
@@ -204,7 +213,7 @@ function RatesCard({ onSaved }: { onSaved: (ok: boolean) => void }) {
     { key: 'chatu', label: 'chatuRate' },
   ];
   return (
-    <Card title={t('rates')}>
+    <Card title={t('rates')} hint={t('hintRates')}>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {fields.map(({ key, label }) => (
           <Field key={key} label={t(label)}>
@@ -220,7 +229,7 @@ function RatesCard({ onSaved }: { onSaved: (ok: boolean) => void }) {
 }
 
 function CategoriesCard() {
-  const { t, data, lang } = useApp();
+  const { t, data, lang, label } = useApp();
   const [editing, setEditing] = useState<{ category: Category; isNew: boolean } | null>(null);
   const range = (c: Category) =>
     c.group === 'mother'
@@ -238,6 +247,7 @@ function CategoriesCard() {
   return (
     <Card
       title={t('categoriesNorms')}
+      hint={t('hintCategories')}
       actions={
         <Button onClick={addNew}>
           <Plus size={16} /> {t('addCategory')}
@@ -249,7 +259,7 @@ function CategoriesCard() {
           <li key={c.id}>
             <button type="button" onClick={() => setEditing({ category: c, isNew: false })} className="flex w-full items-center gap-3 py-3 text-left">
               <span className="min-w-0 flex-1">
-                <span className="block font-semibold text-slate-900">{c.name}</span>
+                <span className="block font-semibold text-slate-900">{label(c.name)}</span>
                 <span className="block text-xs text-slate-500">
                   {range(c)}
                   {c.servesMeal
@@ -270,7 +280,7 @@ function CategoriesCard() {
 }
 
 function HolidaysCard({ onSaved }: { onSaved: (ok: boolean) => void }) {
-  const { t, data, lang } = useApp();
+  const { t, data, lang, label } = useApp();
   const { holidays } = data.settings;
   const [weeklyOff, setWeeklyOff] = useState<number[]>(data.settings.weeklyOffDays);
   const [date, setDate] = useState(todayIso());
@@ -288,7 +298,7 @@ function HolidaysCard({ onSaved }: { onSaved: (ok: boolean) => void }) {
   };
 
   return (
-    <Card title={t('holidaysTitle')}>
+    <Card title={t('holidaysTitle')} hint={t('hintHolidays')}>
       <form
         className="mb-4"
         onSubmit={(e) => {
@@ -321,7 +331,7 @@ function HolidaysCard({ onSaved }: { onSaved: (ok: boolean) => void }) {
           {sorted.map((h) => (
             <li key={h.date} className="flex items-center gap-3 py-2">
               <span className="w-28 text-sm text-slate-500">{h.date}</span>
-              <span className="flex-1 font-medium text-slate-800">{h.name}</span>
+              <span className="flex-1 font-medium text-slate-800">{label(h.name)}</span>
               <button
                 type="button"
                 className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600"
@@ -367,7 +377,7 @@ const MODE_LABEL: Record<StateHolidayMode, StringKey> = {
 };
 
 function StateCalendarSection() {
-  const { t, data, lang } = useApp();
+  const { t, data, lang, label } = useApp();
   const { settings } = data;
   const calendars = data.holidayCalendars ?? [];
   const mode = stateHolidayMode(settings);
@@ -400,7 +410,7 @@ function StateCalendarSection() {
   return (
     <div className="mt-2 border-t border-slate-100 pt-4">
       <div className="mb-1 text-sm font-medium text-slate-700">{t('stateCalendar')}</div>
-      <p className="mb-3 text-xs text-slate-500">{t('stateCalendarHint')}</p>
+      <p className="mb-3 text-sm leading-relaxed text-slate-600">{t('stateCalendarHint')}</p>
       <Segmented
         value={mode}
         onChange={(stateHolidays) => void saveSettings({ stateHolidays })}
@@ -434,7 +444,7 @@ function StateCalendarSection() {
                   <li key={`${h.date}-${h.list}-${h.name}`} className="flex items-center gap-3 px-3 py-2">
                     <span className="w-28 shrink-0 text-sm text-slate-500">{prettyDate(h.date, lang)}</span>
                     <span className={`min-w-0 flex-1 text-sm ${isOpen ? 'text-slate-400 line-through' : 'font-medium text-slate-800'}`}>
-                      {h.name}
+                      {label(h.name)}
                       <span className="ml-2 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
                         {t(h.list === 'public' ? 'listPublic' : 'listState')}
                       </span>
@@ -477,13 +487,13 @@ function FuelItemsCard({ onSaved }: { onSaved: (ok: boolean) => void }) {
   return (
     <Card
       title={t('fuelItems')}
+      hint={t('fuelHint')}
       actions={
         <Button onClick={() => setItems([...items, { id: newId(), name: '', unit: 'Kg', rate: 0, qtyPerBeneficiaryDay: 0 }])}>
           <Plus size={16} /> {t('addItem')}
         </Button>
       }
     >
-      <p className="mb-3 text-xs text-slate-500">{t('fuelHint')}</p>
       <div className="space-y-3">
         {items.map((item) => (
           <div key={item.id} className="rounded-xl bg-slate-50 p-3">
@@ -528,8 +538,7 @@ function ContactCard() {
   const body = `\n\n—\n${user.name} (${user.login})\nAWC ${center.number} ${center.name}`;
   const href = `mailto:${DEVELOPER_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   return (
-    <Card title={t('contactDeveloper')}>
-      <p className="mb-3 text-sm text-slate-600">{t('contactHint')}</p>
+    <Card title={t('contactDeveloper')} hint={t('contactHint')}>
       <div className="flex flex-wrap items-center gap-3">
         <ButtonLink variant="primary" href={href}>
           <Mail size={18} /> {t('emailDeveloper')}
@@ -569,8 +578,7 @@ function DataCard({ onDone }: { onDone: () => void }) {
   const eraseAll = () => confirm(t('resetConfirm')) && run(() => dataApi.resetAll());
 
   return (
-    <Card title={t('data')}>
-      <p className="mb-3 text-sm text-slate-600">{t('dataHint')}</p>
+    <Card title={t('data')} hint={t('dataHint')}>
       <div className="grid gap-2 sm:grid-cols-2">
         <Button
           variant="primary"

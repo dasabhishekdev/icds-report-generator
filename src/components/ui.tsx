@@ -37,15 +37,29 @@ export function ButtonLink({
   return <a className={`${BUTTON_BASE} ${VARIANT[variant]} ${className}`} {...props} />;
 }
 
-export function Card({ title, actions, children, className = '' }: { title?: ReactNode; actions?: ReactNode; children: ReactNode; className?: string }) {
+export function Card({
+  title,
+  hint,
+  actions,
+  children,
+  className = '',
+}: {
+  title?: ReactNode;
+  /** Short plain-language explanation under the title. */
+  hint?: ReactNode;
+  actions?: ReactNode;
+  children: ReactNode;
+  className?: string;
+}) {
   return (
     <section className={`rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 ${className}`}>
       {(title || actions) && (
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className={`${hint ? 'mb-1' : 'mb-3'} flex flex-wrap items-center justify-between gap-2`}>
           {title && <h2 className="text-base font-bold text-slate-800">{title}</h2>}
           {actions}
         </div>
       )}
+      {hint && <p className="mb-3 text-sm leading-relaxed text-slate-600">{hint}</p>}
       {children}
     </section>
   );

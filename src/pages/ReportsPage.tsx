@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
-import { AlertTriangle, ChevronRight, FileDown, FolderOpen, Loader2, Maximize2, Sparkles } from 'lucide-react';
+import { AlertTriangle, ChevronRight, FileDown, FileSpreadsheet, FolderOpen, Loader2, Maximize2, Sparkles } from 'lucide-react';
 import { dataApi } from '../api/data';
 import { reportError } from '../api/http';
-import { downloadReportFile, reportsApi, type GenerateRequest } from '../api/reports';
+import { downloadReportFile, reportsApi, type GenerateRequest, type ReportFileKind } from '../api/reports';
 import type { PaperSize } from '../db/schema';
 import { currentMonth, daysBetweenInclusive, dotted, lastDateOfMonth, monthLabel, monthOf, todayIso } from '../domain/dates';
 import { buildMonthSummary, buildPeriodSummary } from '../domain/month';
@@ -49,7 +49,7 @@ export function ReportsPage() {
 
   const [active, setActive] = useState(0);
   const [fit, setFit] = useState(true);
-  const [busy, setBusy] = useState<'all' | ReportId | null>(null);
+  const [busy, setBusy] = useState<{ scope: 'all' | ReportId; kind: ReportFileKind } | null>(null);
   const [savedCount, setSavedCount] = useState<number | null>(null);
   const [latestId, setLatestId] = useState<string | null>(null);
   const [flash, setFlash] = useFlash();
@@ -77,16 +77,16 @@ export function ReportsPage() {
     void refreshCount();
   }, [refreshCount]);
 
-  /** Generates on the server, saves it for the month and downloads the PDF straight away. */
-  async function generate(sheets?: ReportId[]) {
+  /** Generates PDF and Excel on the server, saves both for the month and downloads the chosen one. */
+  async function generate(kind: ReportFileKind, sheets?: ReportId[]) {
     if (rangeError) return;
-    setBusy(sheets?.length === 1 ? sheets[0] : 'all');
+    setBusy({ scope: sheets?.length === 1 ? sheets[0] : 'all', kind });
     try {
       const req: GenerateRequest = { ...period, paper, ...(sheets ? { sheets } : {}) };
       const report = await reportsApi.generate(req);
       setLatestId(report.id);
       setFlash(t('reportGenerated'));
-      downloadReportFile(report.id, 'pdf');
+      downloadReportFile(report.id, kind);
       await refreshCount();
     } catch (e) {
       reportError(e);
@@ -95,6 +95,7 @@ export function ReportsPage() {
     }
   }
 
+  const isBusy = (scope: 'all' | string, kind: ReportFileKind) => busy?.scope === scope && busy.kind === kind;
   const today = todayIso();
   const unrecorded = summary.rows.filter((r) => r.status.kind === 'unrecorded' && r.date <= today);
   const drafts = summary.rows.filter((r) => r.served && !r.submitted);
@@ -178,15 +179,26 @@ export function ReportsPage() {
         }
       >
         <p className="mb-3 text-sm text-slate-600">{t('generateHint')}</p>
-        <Button
-          variant="primary"
-          className="w-full py-3 text-base sm:w-auto"
-          disabled={busy !== null || rangeError !== null}
-          onClick={() => void generate()}
-        >
-          {busy === 'all' ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
-          {busy === 'all' ? t('generating') : `${t('generateSave')} — ${periodText(period)} (${paper})`}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="primary"
+            className="w-full py-3 text-base sm:w-auto"
+            disabled={busy !== null || rangeError !== null}
+            onClick={() => void generate('pdf')}
+          >
+            {isBusy('all', 'pdf') ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
+            {isBusy('all', 'pdf') ? t('generating') : `${t('generateSave')} — ${periodText(period)} (${paper})`}
+          </Button>
+          <Button
+            className="w-full py-3 text-base sm:w-auto"
+            disabled={busy !== null || rangeError !== null}
+            onClick={() => void generate('xlsx')}
+            title={t('excelHint')}
+          >
+            {isBusy('all', 'xlsx') ? <Loader2 size={18} className="animate-spin" /> : <FileSpreadsheet size={18} />}
+            {isBusy('all', 'xlsx') ? t('generating') : t('downloadExcel')}
+          </Button>
+        </div>
       </Card>
 
       <Link
@@ -230,10 +242,17 @@ export function ReportsPage() {
             <Button
               variant="primary"
               disabled={busy !== null || rangeError !== null}
-              onClick={() => void generate([current.id as ReportId])}
+              onClick={() => void generate('pdf', [current.id as ReportId])}
               title={t('singlePdfHint')}
             >
-              {busy === current.id ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={16} />} {t('thisReportPdf')}
+              {isBusy(current.id, 'pdf') ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={16} />} {t('thisReportPdf')}
+            </Button>
+            <Button
+              disabled={busy !== null || rangeError !== null}
+              onClick={() => void generate('xlsx', [current.id as ReportId])}
+              title={t('singleExcelHint')}
+            >
+              {isBusy(current.id, 'xlsx') ? <Loader2 size={16} className="animate-spin" /> : <FileSpreadsheet size={16} />} {t('thisReportExcel')}
             </Button>
           </div>
         }

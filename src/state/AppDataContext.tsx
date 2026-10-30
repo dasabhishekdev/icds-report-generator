@@ -4,6 +4,7 @@ import { dataStore, loadData, useAppDataStore } from '../api/data';
 import { ERROR_EVENT, UNAUTHORIZED_EVENT } from '../api/http';
 import type { Language } from '../db/schema';
 import type { AppData } from '../domain/month';
+import { localizeLabel } from '../i18n/labels';
 import { rememberLanguage, storedLanguage, translator } from '../i18n/lang';
 import type { StringKey } from '../i18n/strings';
 import { AuthPage } from '../pages/AuthPage';
@@ -12,6 +13,8 @@ interface AppState {
   data: AppData;
   lang: Language;
   t: (key: StringKey) => string;
+  /** Shows a data-entered name (category, fuel item, holiday) in the app language. */
+  label: (text: string) => string;
   user: User;
   logout: () => Promise<void>;
 }
@@ -84,7 +87,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   let content: ReactNode;
   if (auth.status === 'loading' || (auth.status === 'ready' && !data)) content = <Spinner />;
   else if (auth.status === 'anonymous') content = <AuthPage onAuthenticated={enter} />;
-  else content = <Ctx.Provider value={{ data: data!, lang, t: translator(lang), user: auth.user, logout }}>{children}</Ctx.Provider>;
+  else content = <Ctx.Provider value={{ data: data!, lang, t: translator(lang), label: (text) => localizeLabel(text, lang), user: auth.user, logout }}>{children}</Ctx.Provider>;
 
   return (
     <>

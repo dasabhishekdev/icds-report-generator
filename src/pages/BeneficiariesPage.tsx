@@ -10,7 +10,7 @@ import { BeneficiaryForm } from './BeneficiaryForm';
 type Filter = 'all' | 'mother' | 'child';
 
 export function BeneficiariesPage() {
-  const { data, t, lang } = useApp();
+  const { data, t, lang, label } = useApp();
   const { beneficiaries, categories, settings } = data;
   const [filter, setFilter] = useState<Filter>('all');
   const [query, setQuery] = useState('');
@@ -42,8 +42,8 @@ export function BeneficiariesPage() {
     if (!r.enrolled) return { text: t('inactive'), cls: 'bg-slate-200 text-slate-600' };
     if (r.b.kind === 'child' && !r.b.dob) return { text: t('dobMissing'), cls: 'bg-amber-100 text-amber-900 ring-1 ring-amber-300' };
     if (!r.category) return { text: t('agedOut'), cls: 'bg-amber-100 text-amber-800' };
-    if (!r.category.servesMeal) return { text: `${r.category.name} · ${t('notServed')}`, cls: 'bg-sky-100 text-sky-800' };
-    return { text: r.category.name, cls: r.b.kind === 'mother' ? 'bg-rose-100 text-rose-800' : 'bg-teal-100 text-teal-800' };
+    if (!r.category.servesMeal) return { text: `${label(r.category.name)} · ${t('notServed')}`, cls: 'bg-sky-100 text-sky-800' };
+    return { text: label(r.category.name), cls: r.b.kind === 'mother' ? 'bg-rose-100 text-rose-800' : 'bg-teal-100 text-teal-800' };
   };
 
   return (

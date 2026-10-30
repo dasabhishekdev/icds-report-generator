@@ -46,7 +46,7 @@ const opt = (s: string) => (s.trim() ? s.trim() : undefined);
 
 /** Today's category and the next automatic move, worked out from the date of birth being typed. */
 function ChildCategoryPreview({ child }: { child: ChildBeneficiary }) {
-  const { t, lang, data } = useApp();
+  const { t, lang, data, label } = useApp();
   const today = todayIso();
   const { categories, settings } = data;
   const sorted = [...categories].sort((a, b) => a.sortOrder - b.sortOrder);
@@ -56,8 +56,8 @@ function ChildCategoryPreview({ child }: { child: ChildBeneficiary }) {
   const next = shift
     ? shift.to
       ? lang === 'bn'
-        ? `${on} থেকে ${shift.to.name}-এ যাবে`
-        : `Moves to ${shift.to.name} on ${on}`
+        ? `${on} থেকে ${label(shift.to.name)}-এ যাবে`
+        : `Moves to ${label(shift.to.name)} on ${on}`
       : lang === 'bn'
         ? `${on} থেকে বয়সসীমা পেরোবে`
         : `Ages out on ${on}`
@@ -65,7 +65,7 @@ function ChildCategoryPreview({ child }: { child: ChildBeneficiary }) {
   return (
     <div className="rounded-xl bg-teal-50 px-3 py-2 text-sm text-teal-900 ring-1 ring-teal-200">
       <div>
-        {t('categoryToday')}: <b>{current?.name ?? t('agedOut')}</b>
+        {t('categoryToday')}: <b>{current ? label(current.name) : t('agedOut')}</b>
       </div>
       {next && <div className="text-xs text-teal-800">{next}</div>}
     </div>
