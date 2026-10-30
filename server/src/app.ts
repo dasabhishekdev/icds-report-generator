@@ -8,6 +8,7 @@ import type { Config } from './config';
 import { collections, ensureIndexes } from './db';
 import { registerDataRoutes } from './data';
 import { createHolidayService, type HolidayService } from './holidays/service';
+import { registerPhotoRoutes } from './photos/routes';
 import { registerPortalLoginRoutes } from './portal/routes';
 import { embeddedFontCss } from './reports/fonts';
 import { createPdfRenderer, findChrome } from './reports/pdf';
@@ -93,6 +94,7 @@ export async function buildApp(
   registerAuth(app, c, config);
   registerDataRoutes(app, c, holidays);
   registerReportRoutes(app, c, holidays, reports);
+  registerPhotoRoutes(app, c, reports.storage);
   registerPortalLoginRoutes(app, c, config.portalSecret);
   return app;
 }

@@ -133,7 +133,7 @@ export async function ensureIndexes(c: Collections): Promise<void> {
     c.receipts.createIndex({ userId: 1, id: 1 }, { unique: true }),
     c.monthMetas.createIndex({ userId: 1, month: 1 }, { unique: true }),
     c.reports.createIndex({ userId: 1, month: 1, createdAt: -1 }),
-    c.photos.createIndex({ userId: 1, month: 1, createdAt: -1 }),
+    c.photos.createIndex({ userId: 1, month: 1, capturedAt: -1 }),
     c.portalLogins.createIndex({ userId: 1 }, { unique: true }),
   ]);
 }
