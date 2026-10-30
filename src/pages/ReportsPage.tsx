@@ -13,7 +13,7 @@ import { periodText as formatPeriod, rupees } from '../lib/format';
 import { useApp } from '../state/AppDataContext';
 import { SheetPreview, sheetWidthPx } from '../components/SheetPreview';
 import { Button, Card, Field, Flash, Segmented, Stat, TextInput, useFlash } from '../components/ui';
-import { MonthSwitcher } from './MonthPage';
+import { MonthSwitcher } from '../components/MonthSwitcher';
 
 type Mode = 'month' | 'range';
 

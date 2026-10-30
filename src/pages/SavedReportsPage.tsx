@@ -8,7 +8,7 @@ import { REPORT_IDS, REPORT_TITLES } from '../reports';
 import { periodText, rupees } from '../lib/format';
 import { useApp } from '../state/AppDataContext';
 import { Button, ButtonLink, Card, Segmented } from '../components/ui';
-import { MonthSwitcher } from './MonthPage';
+import { MonthSwitcher } from '../components/MonthSwitcher';
 
 type Scope = 'all' | 'month';
 
@@ -68,7 +68,7 @@ export function SavedReportsPage() {
         <Link to="/reports" className="rounded-xl p-2 text-slate-600 hover:bg-slate-200" aria-label={t('backToReports')}>
           <ArrowLeft size={22} />
         </Link>
-        <h1 className="text-xl font-bold text-slate-900">{t('savedReports')}</h1>
+        <h1 className="text-lg font-bold text-slate-900 sm:text-xl">{t('savedReports')}</h1>
         {reports && <span className="text-slate-400">({reports.length})</span>}
       </div>
 

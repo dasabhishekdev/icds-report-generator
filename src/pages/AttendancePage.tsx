@@ -107,8 +107,8 @@ export function AttendancePage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Button variant="ghost" className="px-2" onClick={() => setDate(addDays(date, -1))} aria-label="Previous day">
+      <div className="flex items-center gap-1 min-[390px]:gap-2">
+        <Button variant="ghost" className="shrink-0 px-2" onClick={() => setDate(addDays(date, -1))} aria-label="Previous day">
           <ChevronLeft />
         </Button>
         <div className="min-w-0 flex-1 text-center">
@@ -120,11 +120,11 @@ export function AttendancePage() {
             className="mt-0.5 rounded-lg bg-transparent text-center text-sm text-slate-500"
           />
         </div>
-        <Button variant="ghost" className="px-2" onClick={() => setDate(addDays(date, 1))} aria-label="Next day">
+        <Button variant="ghost" className="shrink-0 px-2" onClick={() => setDate(addDays(date, 1))} aria-label="Next day">
           <ChevronRight />
         </Button>
         {date !== todayIso() && (
-          <Button variant="secondary" onClick={() => setDate(todayIso())}>
+          <Button variant="secondary" className="shrink-0 px-3" onClick={() => setDate(todayIso())}>
             {t('today')}
           </Button>
         )}
@@ -291,7 +291,7 @@ export function AttendancePage() {
                             type="button"
                             onClick={() => toggle(m.id)}
                             aria-pressed={on}
-                            className={`flex min-h-14 items-center gap-2 rounded-xl px-3 py-2 text-left transition active:scale-[0.98] ${
+                            className={`flex min-h-14 items-center gap-2 rounded-xl px-2.5 py-2 text-left transition active:scale-[0.98] sm:px-3 ${
                               on ? 'bg-teal-600 text-white shadow' : 'bg-slate-50 text-slate-800 ring-1 ring-slate-200'
                             }`}
                           >
@@ -303,7 +303,7 @@ export function AttendancePage() {
                               {on && <CheckCheck size={14} />}
                             </span>
                             <span className="min-w-0">
-                              <span className="block truncate text-sm font-semibold">{m.name}</span>
+                              <span className="line-clamp-2 text-sm leading-tight font-semibold break-words">{m.name}</span>
                               <span className={`block truncate text-xs ${on ? 'text-teal-50' : 'text-slate-500'}`}>{sub}</span>
                             </span>
                           </button>

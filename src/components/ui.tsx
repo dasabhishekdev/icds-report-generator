@@ -52,7 +52,7 @@ export function Card({
   className?: string;
 }) {
   return (
-    <section className={`rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 ${className}`}>
+    <section className={`rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200 min-[390px]:p-3.5 sm:p-4 ${className}`}>
       {(title || actions) && (
         <div className={`${hint ? 'mb-1' : 'mb-3'} flex flex-wrap items-center justify-between gap-2`}>
           {title && <h2 className="text-base font-bold text-slate-800">{title}</h2>}
@@ -230,9 +230,9 @@ export function Stat({ label, value, tone = 'slate' }: { label: ReactNode; value
     rose: 'bg-rose-50 text-rose-900',
   };
   return (
-    <div className={`rounded-xl px-3 py-2 ${tones[tone]}`}>
-      <div className="text-xs font-medium opacity-70">{label}</div>
-      <div className="text-xl font-bold tabular-nums">{value}</div>
+    <div className={`min-w-0 rounded-xl px-2.5 py-2 sm:px-3 ${tones[tone]}`}>
+      <div className="truncate text-xs font-medium opacity-70">{label}</div>
+      <div className="truncate text-lg font-bold tabular-nums sm:text-xl">{value}</div>
     </div>
   );
 }

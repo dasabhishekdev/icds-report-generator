@@ -49,7 +49,7 @@ export function BeneficiariesPage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-bold text-slate-900">
+        <h1 className="text-lg font-bold text-slate-900 sm:text-xl">
           {t('navPeople')} <span className="text-slate-400">({beneficiaries.length})</span>
         </h1>
         <div className="flex gap-2">
@@ -110,10 +110,10 @@ export function BeneficiariesPage() {
                 <button
                   type="button"
                   onClick={() => setEditing({ existing: b, kind: b.kind })}
-                  className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-slate-50"
+                  className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left hover:bg-slate-50 sm:gap-3 sm:px-4 sm:py-3"
                 >
                   <span
-                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
+                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full sm:h-10 sm:w-10 ${
                       b.kind === 'mother' ? 'bg-rose-50 text-rose-600' : 'bg-teal-50 text-teal-700'
                     }`}
                   >
@@ -121,9 +121,11 @@ export function BeneficiariesPage() {
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-semibold text-slate-900">{b.name}</span>
-                    <span className="block truncate text-sm text-slate-500">{detail}</span>
+                    <span className="line-clamp-2 text-sm leading-snug text-slate-500">{detail}</span>
                   </span>
-                  <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${bd.cls}`}>{bd.text}</span>
+                  <span className={`max-w-[38%] shrink-0 rounded-full px-2 py-1 text-center text-[11px] leading-tight font-semibold sm:px-2.5 sm:text-xs ${bd.cls}`}>
+                    {bd.text}
+                  </span>
                 </button>
               </li>
             );

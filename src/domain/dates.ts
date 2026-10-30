@@ -132,6 +132,9 @@ const MONTH_NAMES_BN = [
 export const WEEKDAYS_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 export const WEEKDAYS_BN = ['রবি', 'সোম', 'মঙ্গল', 'বুধ', 'বৃহস্পতি', 'শুক্র', 'শনি'];
 
+/** Month name for 1–12. */
+export const monthName = (m: number, lang: 'bn' | 'en') => (lang === 'bn' ? MONTH_NAMES_BN : MONTH_NAMES_EN)[m - 1];
+
 export function monthLabel(month: string, lang: 'bn' | 'en' = 'en'): string {
   const [y, m] = month.split('-').map(Number);
   return `${(lang === 'bn' ? MONTH_NAMES_BN : MONTH_NAMES_EN)[m - 1]} ${y}`;

@@ -1,41 +1,18 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { ChevronLeft, ChevronRight, Plus, RotateCcw, Save, Trash2 } from 'lucide-react';
+import { Plus, RotateCcw, Save, Trash2 } from 'lucide-react';
 import { dataApi, newId } from '../api/data';
 import { STOCK_ITEM_KEYS, type FuelLineOverride, type StockItemKey } from '../db/schema';
 import { round2 } from '../domain/calc';
-import { currentMonth, monthLabel, shiftMonth, todayIso, WEEKDAYS_BN, WEEKDAYS_EN, weekday } from '../domain/dates';
+import { currentMonth, todayIso, WEEKDAYS_BN, WEEKDAYS_EN, weekday } from '../domain/dates';
 import { buildMonthSummary, openingStockFor, type AppData, type MonthSummary } from '../domain/month';
 import { formatQty, rupees } from '../lib/format';
 import { STOCK_LABEL, STOCK_LABEL_EN } from '../reports/common';
 import { useApp } from '../state/AppDataContext';
 import { Button, Card, Field, Flash, NumberInput, Segmented, Select, Stat, TextInput, useFlash } from '../components/ui';
+import { MonthSwitcher } from '../components/MonthSwitcher';
 
 type Tab = 'calendar' | 'stock' | 'fuel';
-
-export function MonthSwitcher({ month, onChange }: { month: string; onChange: (m: string) => void }) {
-  const { lang } = useApp();
-  return (
-    <div className="flex items-center gap-2">
-      <Button variant="ghost" className="px-2" onClick={() => onChange(shiftMonth(month, -1))} aria-label="Previous month">
-        <ChevronLeft />
-      </Button>
-      <input
-        type="month"
-        value={month}
-        onChange={(e) => e.target.value && onChange(e.target.value)}
-        className="sr-only"
-        id="month-picker"
-      />
-      <label htmlFor="month-picker" className="min-w-40 flex-1 cursor-pointer text-center text-lg font-bold text-slate-900">
-        {monthLabel(month, lang)}
-      </label>
-      <Button variant="ghost" className="px-2" onClick={() => onChange(shiftMonth(month, 1))} aria-label="Next month">
-        <ChevronRight />
-      </Button>
-    </div>
-  );
-}
 
 export function MonthPage() {
   const { data, t } = useApp();

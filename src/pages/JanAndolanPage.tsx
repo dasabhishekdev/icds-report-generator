@@ -101,7 +101,7 @@ export function JanAndolanPage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-bold text-slate-900">{t('janAndolanPhoto')}</h1>
+        <h1 className="text-lg font-bold text-slate-900 sm:text-xl">{t('janAndolanPhoto')}</h1>
         <Link to="/jan-andolan/saved" className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-teal-800 hover:bg-teal-50">
           <Images size={18} /> {t('savedPhotos')}
         </Link>

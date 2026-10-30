@@ -6,6 +6,29 @@
 
 html {
   -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Everything is sized in rem, so phones get a slightly smaller scale: iPhone 15 / SE → 15px, small Androids → 14px. */
+@media (max-width: 430px) {
+  html {
+    font-size: 15px;
+  }
+}
+@media (max-width: 374px) {
+  html {
+    font-size: 14px;
+  }
+}
+
+/* iOS zooms the page when a field under 16px is focused. Unlayered, so it wins over Tailwind's text-* utilities. */
+@media (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
 }
 
 body {

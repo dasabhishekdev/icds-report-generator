@@ -51,7 +51,7 @@ export function SavedPhotosPage() {
         <Link to="/jan-andolan" className="rounded-xl p-2 text-slate-600 hover:bg-slate-200" aria-label={t('backToJanAndolan')}>
           <ArrowLeft size={22} />
         </Link>
-        <h1 className="text-xl font-bold text-slate-900">{t('savedPhotos')}</h1>
+        <h1 className="text-lg font-bold text-slate-900 sm:text-xl">{t('savedPhotos')}</h1>
         {photos && <span className="text-slate-400">({photos.length})</span>}
       </div>
 

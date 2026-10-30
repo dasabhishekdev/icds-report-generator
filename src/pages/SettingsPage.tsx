@@ -46,7 +46,7 @@ export function SettingsPage() {
   const { center, rates, fuelItems, nursingMonths, weeklyOffDays } = data.settings;
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold text-slate-900">{t('navSettings')}</h1>
+      <h1 className="text-lg font-bold text-slate-900 sm:text-xl">{t('navSettings')}</h1>
       <AccountCard onDone={(msg) => setFlash(msg)} />
       <PortalLoginCard onDone={(msg) => setFlash(msg)} />
       <LanguageCard />

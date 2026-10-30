@@ -306,6 +306,11 @@ const strings = {
     en: 'For problems, wrong calculations or feature requests, send an email. Your centre name and number are added automatically.',
   },
   emailDeveloper: { bn: 'ইমেল পাঠান', en: 'Send email' },
+  chooseMonth: { bn: 'মাস বেছে নিন', en: 'Choose month' },
+  previousMonth: { bn: 'আগের মাস', en: 'Previous month' },
+  nextMonth: { bn: 'পরের মাস', en: 'Next month' },
+  previousYear: { bn: 'আগের বছর', en: 'Previous year' },
+  nextYear: { bn: 'পরের বছর', en: 'Next year' },
   navJanAndolan: { bn: 'জন আন্দোলন', en: 'Jan Andolan' },
   janAndolanPhoto: { bn: 'জন আন্দোলনের ছবি', en: 'Jan Andolan photo' },
   janAndolanHint: {
