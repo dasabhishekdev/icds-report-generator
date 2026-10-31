@@ -291,6 +291,8 @@ const strings = {
   passwordHint: { bn: 'অন্তত ৮ অক্ষর', en: 'At least 8 characters' },
   registerHint: { bn: 'বরাদ্দ, দর ও বিভাগ ডিফল্ট হিসেবে দেওয়া থাকবে — পরে সেটিংসে বদলাতে পারবেন।', en: 'Norms, rates and categories start with defaults — change them later in Settings.' },
   account: { bn: 'অ্যাকাউন্ট', en: 'Account' },
+  reportSettings: { bn: 'রিপোর্ট সেটিংস', en: 'Report settings' },
+  accountSettings: { bn: 'অ্যাকাউন্ট সেটিংস', en: 'Account settings' },
   changePassword: { bn: 'পাসওয়ার্ড বদলান', en: 'Change password' },
   currentPassword: { bn: 'বর্তমান পাসওয়ার্ড', en: 'Current password' },
   newPassword: { bn: 'নতুন পাসওয়ার্ড', en: 'New password' },

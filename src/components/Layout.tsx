@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router';
-import { CalendarDays, Camera, ClipboardCheck, FileSpreadsheet, LogOut, Settings, Users } from 'lucide-react';
+import { Link, NavLink, Outlet, useLocation } from 'react-router';
+import { CalendarDays, Camera, ClipboardCheck, FileSpreadsheet, LogOut, Settings, UserRound, Users } from 'lucide-react';
 import { useApp } from '../state/AppDataContext';
 import type { StringKey } from '../i18n/strings';
 
@@ -57,10 +57,10 @@ export function Layout() {
           ))}
         </nav>
         <div className="flex items-center gap-2 border-t border-slate-100 p-3">
-          <div className="min-w-0 flex-1 px-1">
+          <Link to="/settings/account" className="min-w-0 flex-1 rounded-lg px-1 py-0.5 hover:bg-slate-50" title={t('accountSettings')}>
             <div className="truncate text-sm font-semibold text-slate-700">{user.name}</div>
             <div className="truncate text-xs text-slate-400">{user.login}</div>
-          </div>
+          </Link>
           <button
             type="button"
             onClick={() => void logout()}
@@ -76,12 +76,20 @@ export function Layout() {
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="z-30 flex shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2 md:hidden">
           <img src="/icon.svg" alt="" className="h-8 w-8 shrink-0 rounded-lg" />
-          <div className="min-w-0 leading-tight">
+          <div className="min-w-0 flex-1 leading-tight">
             <div className="text-sm font-bold text-slate-900">{t('appName')}</div>
             <div className="truncate text-xs text-slate-500">
               {c.name} · {c.number}
             </div>
           </div>
+          <Link
+            to="/settings/account"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-teal-50 text-teal-700 active:bg-teal-100"
+            aria-label={t('accountSettings')}
+            title={t('accountSettings')}
+          >
+            <UserRound size={20} />
+          </Link>
         </header>
         <div ref={scroller} className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain">
           <main className="mx-auto min-h-full max-w-5xl px-2.5 pt-3 pb-6 min-[390px]:px-3 md:px-8 md:pt-8 md:pb-10">

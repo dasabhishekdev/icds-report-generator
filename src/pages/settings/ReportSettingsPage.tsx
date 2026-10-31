@@ -1,148 +1,34 @@
-import { useRef, useState } from 'react';
-import {
-  CalendarCheck,
-  CalendarX,
-  ChevronLeft,
-  ChevronRight,
-  Download,
-  KeyRound,
-  LogOut,
-  Mail,
-  Plus,
-  RefreshCw,
-  RotateCcw,
-  Trash2,
-  Upload,
-  UserRound,
-} from 'lucide-react';
-import { authApi } from '../api/auth';
-import { dataApi, exportBackup, newId } from '../api/data';
-import { emptyNorms } from '../db/defaults';
-import {
-  STATE_HOLIDAY_MODES,
-  type BackupFile,
-  type Category,
-  type CenterInfo,
-  type FuelItem,
-  type Language,
-  type Settings,
-  type StateHolidayMode,
-} from '../db/schema';
-import { WEEKDAYS_BN, WEEKDAYS_EN, formatMonths, prettyDate, todayIso } from '../domain/dates';
-import { stateHolidayMode, type HolidaySource } from '../domain/holidays';
-import { downloadJson } from '../lib/download';
-import type { StringKey } from '../i18n/strings';
-import { useApp } from '../state/AppDataContext';
-import { Button, ButtonLink, Card, Field, Flash, Modal, NumberInput, Segmented, TextInput, useFlash } from '../components/ui';
-import { PortalLoginCard } from '../components/PortalLoginCard';
-import { CategoryEditor } from './CategoryEditor';
+import { useState } from 'react';
+import { CalendarCheck, CalendarX, ChevronLeft, ChevronRight, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { dataApi, newId } from '../../api/data';
+import { emptyNorms } from '../../db/defaults';
+import { STATE_HOLIDAY_MODES, type Category, type FuelItem, type Settings, type StateHolidayMode } from '../../db/schema';
+import { WEEKDAYS_BN, WEEKDAYS_EN, formatMonths, prettyDate, todayIso } from '../../domain/dates';
+import { stateHolidayMode, type HolidaySource } from '../../domain/holidays';
+import type { StringKey } from '../../i18n/strings';
+import { useApp } from '../../state/AppDataContext';
+import { Button, Card, Field, Flash, Modal, NumberInput, Segmented, TextInput, useFlash } from '../../components/ui';
+import { CategoryEditor } from '../CategoryEditor';
+import { SettingsHeader } from './SettingsHeader';
 
 const saveSettings = (patch: Partial<Omit<Settings, 'id'>>) => dataApi.saveSettings(patch);
 
-export function SettingsPage() {
+/** Everything the ration calculation and the registers depend on. */
+export function ReportSettingsPage() {
   const { t, data } = useApp();
   const [flash, setFlash] = useFlash();
   const saved = (ok: boolean) => ok && setFlash(t('saved'));
-  const { center, rates, fuelItems, nursingMonths, weeklyOffDays } = data.settings;
+  const { rates, fuelItems, nursingMonths, weeklyOffDays } = data.settings;
   return (
     <div className="space-y-4">
-      <h1 className="text-lg font-bold text-slate-900 sm:text-xl">{t('navSettings')}</h1>
-      <AccountCard onDone={(msg) => setFlash(msg)} />
-      <PortalLoginCard onDone={(msg) => setFlash(msg)} />
-      <LanguageCard />
-      <NursingPeriodCard key={nursingMonths} onSaved={saved} />
-      <CentreCard key={JSON.stringify(center)} onSaved={saved} />
+      <SettingsHeader />
       <RatesCard key={JSON.stringify(rates)} onSaved={saved} />
       <CategoriesCard />
+      <NursingPeriodCard key={nursingMonths} onSaved={saved} />
       <HolidaysCard key={weeklyOffDays.join()} onSaved={saved} />
       <FuelItemsCard key={JSON.stringify(fuelItems)} onSaved={saved} />
-      <DataCard onDone={() => setFlash(t('done'))} />
-      <ContactCard />
       <Flash message={flash} />
     </div>
-  );
-}
-
-function AccountCard({ onDone }: { onDone: (msg: string) => void }) {
-  const { t, user, logout } = useApp();
-  const [open, setOpen] = useState(false);
-  const [current, setCurrent] = useState('');
-  const [next, setNext] = useState('');
-  const [error, setError] = useState<string | null>(null);
-
-  async function change() {
-    setError(null);
-    try {
-      await authApi.changePassword(current, next);
-      setOpen(false);
-      setCurrent('');
-      setNext('');
-      onDone(t('passwordChanged'));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    }
-  }
-
-  return (
-    <Card title={t('account')} hint={t('hintAccount')}>
-      <div className="flex flex-wrap items-center gap-3">
-        <span className="flex h-11 w-11 items-center justify-center rounded-full bg-teal-50 text-teal-700">
-          <UserRound size={22} />
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="truncate font-semibold text-slate-900">{user.name}</div>
-          <div className="truncate text-sm text-slate-500">{user.login}</div>
-        </div>
-        <Button onClick={() => setOpen(true)}>
-          <KeyRound size={16} /> {t('changePassword')}
-        </Button>
-        <Button variant="danger" onClick={() => void logout()}>
-          <LogOut size={16} /> {t('logout')}
-        </Button>
-      </div>
-      <Modal open={open} onClose={() => setOpen(false)} title={t('changePassword')}>
-        <form
-          className="space-y-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void change();
-          }}
-        >
-          <Field label={t('currentPassword')}>
-            <TextInput type="password" value={current} onChange={(e) => setCurrent(e.target.value)} required autoComplete="current-password" />
-          </Field>
-          <Field label={t('newPassword')} hint={t('passwordHint')}>
-            <TextInput type="password" value={next} onChange={(e) => setNext(e.target.value)} required minLength={8} autoComplete="new-password" />
-          </Field>
-          {error && <div className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700 ring-1 ring-red-200">{error}</div>}
-          <div className="flex gap-2">
-            <Button type="submit" variant="primary" className="flex-1">
-              {t('save')}
-            </Button>
-            <Button onClick={() => setOpen(false)}>{t('cancel')}</Button>
-          </div>
-        </form>
-      </Modal>
-    </Card>
-  );
-}
-
-function LanguageCard() {
-  const { t, data } = useApp();
-  const setLanguage = (language: Language) => {
-    if (language !== data.settings.language) void saveSettings({ language });
-  };
-  return (
-    <Card title={t('language')} hint={t('hintLanguage')}>
-      <Segmented
-        value={data.settings.language}
-        onChange={setLanguage}
-        options={[
-          { value: 'bn', label: 'বাংলা' },
-          { value: 'en', label: 'English' },
-        ]}
-      />
-    </Card>
   );
 }
 
@@ -170,37 +56,6 @@ function NursingPeriodCard({ onSaved }: { onSaved: (ok: boolean) => void }) {
           </Button>
         </div>
       </form>
-    </Card>
-  );
-}
-
-const CENTRE_FIELDS: { key: keyof CenterInfo; label: StringKey }[] = [
-  { key: 'name', label: 'centreName' },
-  { key: 'number', label: 'centreNumber' },
-  { key: 'code', label: 'centreCode' },
-  { key: 'gramPanchayat', label: 'gramPanchayat' },
-  { key: 'project', label: 'project' },
-  { key: 'district', label: 'district' },
-  { key: 'workerName', label: 'workerName' },
-  { key: 'vegShopkeeper', label: 'vegShopkeeper' },
-  { key: 'fuelShopkeeper', label: 'fuelShopkeeper' },
-];
-
-function CentreCard({ onSaved }: { onSaved: (ok: boolean) => void }) {
-  const { t, data } = useApp();
-  const [center, setCenter] = useState(data.settings.center);
-  return (
-    <Card title={t('centreInfo')} hint={t('hintCentre')}>
-      <div className="grid gap-3 sm:grid-cols-2">
-        {CENTRE_FIELDS.map(({ key, label }) => (
-          <Field key={key} label={t(label)}>
-            <TextInput value={center[key]} onChange={(e) => setCenter({ ...center, [key]: e.target.value })} />
-          </Field>
-        ))}
-      </div>
-      <Button variant="primary" className="mt-4" disabled={!center.name.trim() || !center.number.trim()} onClick={() => void saveSettings({ center }).then(onSaved)}>
-        {t('save')}
-      </Button>
     </Card>
   );
 }
@@ -527,88 +382,6 @@ function FuelItemsCard({ onSaved }: { onSaved: (ok: boolean) => void }) {
       <Button variant="primary" className="mt-4" onClick={() => void saveSettings({ fuelItems: items.filter((i) => i.name.trim()) }).then(onSaved)}>
         {t('save')}
       </Button>
-    </Card>
-  );
-}
-
-const DEVELOPER_EMAIL = 'abhishekdasdev@outlook.com';
-
-function ContactCard() {
-  const { t, data, user } = useApp();
-  const { center } = data.settings;
-  const subject = `ICDS Reports — AWC ${center.number || '?'} ${center.name}`.trim();
-  const body = `\n\n—\n${user.name} (${user.login})\nAWC ${center.number} ${center.name}`;
-  const href = `mailto:${DEVELOPER_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  return (
-    <Card title={t('contactDeveloper')} hint={t('contactHint')}>
-      <div className="flex flex-wrap items-center gap-3">
-        <ButtonLink variant="primary" href={href}>
-          <Mail size={18} /> {t('emailDeveloper')}
-        </ButtonLink>
-        <a href={`mailto:${DEVELOPER_EMAIL}`} className="text-sm font-medium break-all text-teal-700 underline">
-          {DEVELOPER_EMAIL}
-        </a>
-      </div>
-    </Card>
-  );
-}
-
-function DataCard({ onDone }: { onDone: () => void }) {
-  const { t, data } = useApp();
-  const fileRef = useRef<HTMLInputElement>(null);
-
-  const [busy, setBusy] = useState(false);
-
-  async function run(task: () => Promise<void>) {
-    setBusy(true);
-    try {
-      await task();
-      onDone();
-    } catch (e) {
-      alert(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const restore = (file: File) =>
-    confirm(t('importConfirm')) &&
-    run(async () => dataApi.importBackup(JSON.parse(await file.text()) as BackupFile));
-
-  const loadDefaults = () => confirm(t('defaultsConfirm')) && run(() => dataApi.loadDefaults());
-
-  const eraseAll = () => confirm(t('resetConfirm')) && run(() => dataApi.resetAll());
-
-  return (
-    <Card title={t('data')} hint={t('dataHint')}>
-      <div className="grid gap-2 sm:grid-cols-2">
-        <Button
-          variant="primary"
-          onClick={() => downloadJson(exportBackup(data), `ICDS_${data.settings.center.number || 'centre'}_backup_${todayIso()}.json`)}
-        >
-          <Download size={18} /> {t('exportBackup')}
-        </Button>
-        <Button disabled={busy} onClick={() => fileRef.current?.click()}>
-          <Upload size={18} /> {t('importBackup')}
-        </Button>
-        <Button disabled={busy} onClick={() => void loadDefaults()}>
-          <RotateCcw size={18} /> {t('loadDefaults')}
-        </Button>
-        <Button variant="danger" disabled={busy} onClick={() => void eraseAll()}>
-          <Trash2 size={18} /> {t('resetAll')}
-        </Button>
-      </div>
-      <input
-        ref={fileRef}
-        type="file"
-        accept="application/json,.json"
-        className="hidden"
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (f) void restore(f);
-          e.target.value = '';
-        }}
-      />
     </Card>
   );
 }

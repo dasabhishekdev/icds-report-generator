@@ -1,4 +1,4 @@
-import { HashRouter, Route, Routes } from 'react-router';
+import { HashRouter, Navigate, Route, Routes } from 'react-router';
 import { Layout } from './components/Layout';
 import { AppDataProvider } from './state/AppDataContext';
 import { AttendancePage } from './pages/AttendancePage';
@@ -8,7 +8,8 @@ import { MonthPage } from './pages/MonthPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { SavedPhotosPage } from './pages/SavedPhotosPage';
 import { SavedReportsPage } from './pages/SavedReportsPage';
-import { SettingsPage } from './pages/SettingsPage';
+import { AccountSettingsPage } from './pages/settings/AccountSettingsPage';
+import { ReportSettingsPage } from './pages/settings/ReportSettingsPage';
 
 export function App() {
   return (
@@ -23,7 +24,9 @@ export function App() {
             <Route path="reports/saved" element={<SavedReportsPage />} />
             <Route path="jan-andolan" element={<JanAndolanPage />} />
             <Route path="jan-andolan/saved" element={<SavedPhotosPage />} />
-            <Route path="settings" element={<SettingsPage />} />
+            <Route path="settings" element={<Navigate to="/settings/account" replace />} />
+            <Route path="settings/account" element={<AccountSettingsPage />} />
+            <Route path="settings/reports" element={<ReportSettingsPage />} />
           </Route>
         </Routes>
       </HashRouter>

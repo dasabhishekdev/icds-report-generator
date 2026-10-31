@@ -74,7 +74,7 @@ export function PortalShortcutCard() {
       ) : (
         <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
           {t('noPortalLogin')}
-          <Link to="/settings">
+          <Link to="/settings/account">
             <Button>{t('addPortalLogin')}</Button>
           </Link>
         </div>
