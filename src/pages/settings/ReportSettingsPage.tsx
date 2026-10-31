@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CalendarCheck, CalendarX, ChevronLeft, ChevronRight, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { CalendarCheck, CalendarX, ChevronLeft, ChevronRight, Plus, RefreshCw, RotateCcw, Trash2 } from 'lucide-react';
 import { dataApi, newId } from '../../api/data';
 import { emptyNorms } from '../../db/defaults';
 import { STATE_HOLIDAY_MODES, type Category, type FuelItem, type Settings, type StateHolidayMode } from '../../db/schema';
@@ -27,8 +27,35 @@ export function ReportSettingsPage() {
       <NursingPeriodCard key={nursingMonths} onSaved={saved} />
       <HolidaysCard key={weeklyOffDays.join()} onSaved={saved} />
       <FuelItemsCard key={JSON.stringify(fuelItems)} onSaved={saved} />
+      <DefaultsCard onDone={() => setFlash(t('done'))} />
       <Flash message={flash} />
     </div>
+  );
+}
+
+function DefaultsCard({ onDone }: { onDone: () => void }) {
+  const { t } = useApp();
+  const [busy, setBusy] = useState(false);
+
+  async function loadDefaults() {
+    if (!confirm(t('defaultsConfirm'))) return;
+    setBusy(true);
+    try {
+      await dataApi.loadDefaults();
+      onDone();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card title={t('defaultsTitle')} hint={t('defaultsHint')}>
+      <Button disabled={busy} onClick={() => void loadDefaults()}>
+        <RotateCcw size={18} /> {t('loadDefaults')}
+      </Button>
+    </Card>
   );
 }
 

@@ -118,6 +118,23 @@ describe.skipIf(!MONGO_URL)('API', () => {
     expect((await call(fresh, 'GET', '/api/data')).statusCode).toBe(401);
   });
 
+  it('keeps a login for 30 days only when "Remember me" is ticked', async () => {
+    await register('remember@test.in');
+    const loginAs = (remember?: boolean) =>
+      app.inject({ method: 'POST', url: '/api/auth/login', payload: { login: 'remember@test.in', password: 'correct horse', remember } });
+    const cookieOf = (res: LightMyRequestResponse) => res.cookies.find((x) => x.name === SESSION_COOKIE);
+
+    expect(cookieOf(await loginAs())?.maxAge).toBe(30 * 24 * 3600);
+    expect(cookieOf(await loginAs(true))?.maxAge).toBe(30 * 24 * 3600);
+    const short = await loginAs(false);
+    expect(cookieOf(short)?.maxAge).toBeUndefined();
+
+    const changed = await call(sessionOf(short), 'POST', '/api/auth/password', { currentPassword: 'correct horse', newPassword: 'battery staple' });
+    expect(changed.statusCode).toBe(200);
+    expect(cookieOf(changed)?.maxAge).toBeUndefined();
+    expect((await call(sessionOf(changed), 'GET', '/api/auth/me')).json().user.login).toBe('remember@test.in');
+  });
+
   it('serves the state holiday calendar and stores holiday choices and children without a date of birth', async () => {
     const cookie = await register('holidays@test.in');
     const data = (await call(cookie, 'GET', '/api/data')).json();

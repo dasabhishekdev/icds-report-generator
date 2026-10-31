@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Download, KeyRound, LogOut, Mail, RotateCcw, Trash2, Upload, UserRound } from 'lucide-react';
+import { Download, KeyRound, LogOut, Mail, Trash2, Upload, UserRound } from 'lucide-react';
 import { authApi } from '../../api/auth';
 import { dataApi, exportBackup } from '../../api/data';
 import type { BackupFile, CenterInfo, Language, Settings } from '../../db/schema';
@@ -169,8 +169,6 @@ function DataCard({ onDone }: { onDone: () => void }) {
     confirm(t('importConfirm')) &&
     run(async () => dataApi.importBackup(JSON.parse(await file.text()) as BackupFile));
 
-  const loadDefaults = () => confirm(t('defaultsConfirm')) && run(() => dataApi.loadDefaults());
-
   const eraseAll = () => confirm(t('resetConfirm')) && run(() => dataApi.resetAll());
 
   return (
@@ -185,10 +183,7 @@ function DataCard({ onDone }: { onDone: () => void }) {
         <Button disabled={busy} onClick={() => fileRef.current?.click()}>
           <Upload size={18} /> {t('importBackup')}
         </Button>
-        <Button disabled={busy} onClick={() => void loadDefaults()}>
-          <RotateCcw size={18} /> {t('loadDefaults')}
-        </Button>
-        <Button variant="danger" disabled={busy} onClick={() => void eraseAll()}>
+        <Button variant="danger" disabled={busy} onClick={() => void eraseAll()} className="sm:col-span-2">
           <Trash2 size={18} /> {t('resetAll')}
         </Button>
       </div>

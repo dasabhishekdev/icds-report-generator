@@ -274,6 +274,11 @@ const strings = {
   importBackup: { bn: 'ব্যাকআপ থেকে ফেরত', en: 'Restore backup' },
   importConfirm: { bn: 'বর্তমান সব তথ্য মুছে ব্যাকআপ বসানো হবে। চালিয়ে যাবেন?', en: 'This replaces all current data with the backup. Continue?' },
   loadDefaults: { bn: 'ডিফল্ট সেটিংস বসান', en: 'Load default settings' },
+  defaultsTitle: { bn: 'ডিফল্ট সেটিংস', en: 'Default settings' },
+  defaultsHint: {
+    bn: 'উপরের দর, বিভাগ, প্রসূতি থাকার সময়, সাপ্তাহিক ছুটি, সরকারি ছুটির নিয়ম ও জ্বালানী দ্রব্য শুরুর মানে ফেরে। নিজের যোগ করা ছুটি, উপকারভোগী, হাজিরা ও কেন্দ্রের তথ্য বদলাবে না।',
+    en: 'Puts the rates, categories, nursing period, weekly off, state holiday setting and fuel items above back to their starting values. Your own holidays, beneficiaries, attendance and centre details are not touched.',
+  },
   defaultsConfirm: {
     bn: 'দর, বিভাগ ও মাথাপিছু বরাদ্দ, জ্বালানী দ্রব্য, প্রসূতি থাকার সময়, সাপ্তাহিক ছুটি ও সরকারি ছুটির তালিকা ডিফল্টে ফিরবে। উপকারভোগী, হাজিরা, মজুত ও কেন্দ্রের তথ্য যেমন আছে তেমনই থাকবে। রিপোর্টের প্রিভিউ নতুন হিসাবে দেখাবে; আগে সংরক্ষিত PDF ও Excel বদলাবে না। চালিয়ে যাবেন?',
     en: 'Rates, categories and per-head norms, fuel items, nursing period, weekly off and the govt holiday setting go back to the defaults. Beneficiaries, attendance, stock and centre details stay as they are. The report preview recalculates; PDFs and Excel files already saved are not changed. Continue?',
@@ -289,6 +294,8 @@ const strings = {
   loginId: { bn: 'ইমেল বা মোবাইল নম্বর', en: 'Email or mobile number' },
   password: { bn: 'পাসওয়ার্ড', en: 'Password' },
   passwordHint: { bn: 'অন্তত ৮ অক্ষর', en: 'At least 8 characters' },
+  rememberMe: { bn: 'আমাকে মনে রাখুন', en: 'Remember me' },
+  rememberMeHint: { bn: '৩০ দিন লগইন থাকবে। অন্যের ফোনে হলে টিক তুলে দিন।', en: 'Stay logged in for 30 days. Untick on a shared phone.' },
   registerHint: { bn: 'বরাদ্দ, দর ও বিভাগ ডিফল্ট হিসেবে দেওয়া থাকবে — পরে সেটিংসে বদলাতে পারবেন।', en: 'Norms, rates and categories start with defaults — change them later in Settings.' },
   account: { bn: 'অ্যাকাউন্ট', en: 'Account' },
   reportSettings: { bn: 'রিপোর্ট সেটিংস', en: 'Report settings' },

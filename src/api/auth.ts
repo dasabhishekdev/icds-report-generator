@@ -9,7 +9,8 @@ export interface User {
 
 export const authApi = {
   me: () => api<{ user: User | null }>('GET', '/api/auth/me'),
-  login: (login: string, password: string) => api<{ user: User }>('POST', '/api/auth/login', { login, password }),
+  login: (login: string, password: string, remember: boolean) =>
+    api<{ user: User }>('POST', '/api/auth/login', { login, password, remember }),
   register: (input: { login: string; password: string; name: string; center: Partial<CenterInfo>; language: Language }) =>
     api<{ user: User }>('POST', '/api/auth/register', input),
   logout: () => api<{ ok: true }>('POST', '/api/auth/logout'),

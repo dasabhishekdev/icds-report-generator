@@ -17,6 +17,8 @@ export interface SessionDoc {
   userId: ObjectId;
   createdAt: Date;
   expiresAt: Date;
+  /** False for "Remember me" unticked: the cookie ends with the browser. Missing on older sessions = true. */
+  persistent?: boolean;
 }
 
 export interface ReportFile {

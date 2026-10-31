@@ -24,6 +24,7 @@ export function AuthPage({ onAuthenticated }: { onAuthenticated: (user: User) =>
   const [mode, setMode] = useState<Mode>('login');
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
+  const [remember, setRemember] = useState(true);
   const [name, setName] = useState('');
   const [center, setCenter] = useState<Partial<CenterInfo>>({});
   const [busy, setBusy] = useState(false);
@@ -36,7 +37,7 @@ export function AuthPage({ onAuthenticated }: { onAuthenticated: (user: User) =>
     try {
       const { user } =
         mode === 'login'
-          ? await authApi.login(login, password)
+          ? await authApi.login(login, password, remember)
           : await authApi.register({ login, password, name, center: { ...center, workerName: name }, language: lang });
       rememberLanguage(lang);
       await onAuthenticated(user);
@@ -106,6 +107,21 @@ export function AuthPage({ onAuthenticated }: { onAuthenticated: (user: User) =>
               autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
             />
           </Field>
+
+          {mode === 'login' && (
+            <label className="flex cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                checked={remember}
+                onChange={(e) => setRemember(e.target.checked)}
+                className="mt-0.5 h-5 w-5 shrink-0 accent-teal-700"
+              />
+              <span className="text-sm">
+                <span className="block font-semibold text-slate-800">{t('rememberMe')}</span>
+                <span className="block text-xs text-slate-500">{t('rememberMeHint')}</span>
+              </span>
+            </label>
+          )}
 
           {mode === 'register' && (
             <div className="space-y-3 rounded-2xl bg-slate-50 p-3">

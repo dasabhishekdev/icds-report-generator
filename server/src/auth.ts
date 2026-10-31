@@ -20,6 +20,8 @@ export function sessionUserId(request: FastifyRequest): ObjectId {
   return request.userId;
 }
 const SESSION_DAYS = 30;
+/** Server-side cap for a "Remember me" unticked login, in case the browser keeps its session cookie. */
+const SHORT_SESSION_HOURS = 12;
 const SCRYPT = { N: 16384, r: 8, p: 1, keylen: 64 };
 
 function scrypt(password: string, salt: Buffer, keylen: number, options: ScryptOptions): Promise<Buffer> {
@@ -59,25 +61,30 @@ export function registerAuth(app: FastifyInstance, c: Collections, config: Confi
     secure: config.cookieSecure,
     sameSite: 'lax' as const,
     path: '/',
-    maxAge: SESSION_DAYS * 24 * 3600,
   };
 
-  async function startSession(reply: FastifyReply, userId: ObjectId) {
+  async function startSession(reply: FastifyReply, userId: ObjectId, persistent: boolean) {
     const token = randomBytes(32).toString('base64url');
     const now = new Date();
+    const lifetimeMs = persistent ? SESSION_DAYS * 24 * 3600 * 1000 : SHORT_SESSION_HOURS * 3600 * 1000;
     await c.sessions.insertOne({
       tokenHash: sha256(token),
       userId,
       createdAt: now,
-      expiresAt: new Date(now.getTime() + SESSION_DAYS * 24 * 3600 * 1000),
+      expiresAt: new Date(now.getTime() + lifetimeMs),
+      persistent,
     });
-    reply.setCookie(SESSION_COOKIE, token, cookieOptions);
+    reply.setCookie(SESSION_COOKIE, token, persistent ? { ...cookieOptions, maxAge: lifetimeMs / 1000 } : cookieOptions);
+  }
+
+  async function currentSession(request: FastifyRequest) {
+    const token = request.cookies[SESSION_COOKIE];
+    if (!token) return null;
+    return c.sessions.findOne({ tokenHash: sha256(token), expiresAt: { $gt: new Date() } });
   }
 
   async function sessionUser(request: FastifyRequest): Promise<UserDoc | null> {
-    const token = request.cookies[SESSION_COOKIE];
-    if (!token) return null;
-    const session = await c.sessions.findOne({ tokenHash: sha256(token), expiresAt: { $gt: new Date() } });
+    const session = await currentSession(request);
     if (!session) return null;
     return c.users.findOne({ _id: session.userId });
   }
@@ -109,7 +116,7 @@ export function registerAuth(app: FastifyInstance, c: Collections, config: Confi
       throw e;
     }
     await seedUser(c, user._id, { ...body.center, workerName: body.center.workerName || body.name }, { language: body.language ?? 'bn' });
-    await startSession(reply, user._id);
+    await startSession(reply, user._id, true);
     return reply.code(201).send({ user: publicUser(user) });
   });
 
@@ -118,7 +125,7 @@ export function registerAuth(app: FastifyInstance, c: Collections, config: Confi
     const user = await c.users.findOne({ login: body.login });
     const ok = user ? await verifyPassword(body.password, user.passwordHash) : (await DUMMY_HASH, false);
     if (!user || !ok) return reply.code(401).send({ error: 'Wrong email / mobile or password' });
-    await startSession(reply, user._id);
+    await startSession(reply, user._id, body.remember ?? true);
     return { user: publicUser(user) };
   });
 
@@ -141,9 +148,10 @@ export function registerAuth(app: FastifyInstance, c: Collections, config: Confi
     if (!user || !(await verifyPassword(body.currentPassword, user.passwordHash))) {
       return reply.code(400).send({ error: 'Current password is wrong' });
     }
+    const persistent = (await currentSession(request))?.persistent ?? true;
     await c.users.updateOne({ _id: user._id }, { $set: { passwordHash: await hashPassword(body.newPassword) } });
     await c.sessions.deleteMany({ userId: user._id });
-    await startSession(reply, user._id);
+    await startSession(reply, user._id, persistent);
     return { ok: true };
   });
 }

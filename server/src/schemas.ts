@@ -182,7 +182,11 @@ export const registerSchema = z.strictObject({
   language: z.enum(['bn', 'en']).optional(),
 });
 
-export const loginRequestSchema = z.strictObject({ login: loginSchema, password: z.string().min(1).max(200) });
+export const loginRequestSchema = z.strictObject({
+  login: loginSchema,
+  password: z.string().min(1).max(200),
+  remember: z.boolean().optional(),
+});
 
 export const passwordChangeSchema = z.strictObject({
   currentPassword: z.string().min(1).max(200),
