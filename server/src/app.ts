@@ -6,6 +6,7 @@ import { ZodError } from 'zod';
 import { registerAuth } from './auth';
 import type { Config } from './config';
 import { collections, ensureIndexes } from './db';
+import { registerAndroidRoutes } from './android/routes';
 import { registerDataRoutes } from './data';
 import { createHolidayService, type HolidayService } from './holidays/service';
 import { registerPhotoRoutes } from './photos/routes';
@@ -98,5 +99,6 @@ export async function buildApp(
   registerReportRoutes(app, c, holidays, reports);
   registerPhotoRoutes(app, c, reports.storage);
   registerPortalLoginRoutes(app, c, config.portalSecret);
+  registerAndroidRoutes(app, reports.storage);
   return app;
 }

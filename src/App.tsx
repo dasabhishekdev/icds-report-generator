@@ -28,6 +28,8 @@ export function App() {
             <Route path="settings/account" element={<AccountSettingsPage />} />
             <Route path="settings/reports" element={<ReportSettingsPage />} />
           </Route>
+          {/* The signed-out login page is #/login; once signed in it lands on attendance. */}
+          <Route path="login" element={<Navigate to="/" replace />} />
         </Routes>
       </HashRouter>
     </AppDataProvider>

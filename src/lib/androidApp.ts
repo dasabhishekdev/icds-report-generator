@@ -1,15 +1,17 @@
 /**
  * The Android app (a Trusted Web Activity) is not on the Play Store: it opens this site with
- * `?apk=<versionCode>`, and a newer APK is offered from /android/latest.json when one is published.
- * Ordinary website updates reach the app without reinstalling.
+ * `?apk=<versionCode>`, and a newer APK (kept in the private S3 bucket, streamed by the API) is
+ * offered when one is published. Ordinary website updates reach the app without reinstalling.
  */
 const APK_VERSION_KEY = 'icds-apk-version';
-const LATEST_URL = '/android/latest.json';
-export const APK_DOWNLOAD_URL = '/android/ICDS-Reports.apk';
+const LATEST_URL = '/api/android/latest';
+export const APK_DOWNLOAD_URL = '/api/android/download';
 
 export interface AndroidRelease {
   versionCode: number;
   versionName: string;
+  /** Bytes. */
+  size: number;
 }
 
 /** Remembers the version the Android app launched with, then drops it from the address bar. */
@@ -26,7 +28,8 @@ export function rememberApkVersion(): void {
 /** 0 when not running inside the Android app. */
 export const installedApkVersion = (): number => Number(localStorage.getItem(APK_VERSION_KEY)) || 0;
 
-export const isAndroidBrowser = () => /Android/i.test(navigator.userAgent) && installedApkVersion() === 0;
+/** Running inside the installed Android app. */
+export const inAndroidApp = () => installedApkVersion() > 0;
 
 export async function latestAndroidRelease(): Promise<AndroidRelease | null> {
   try {

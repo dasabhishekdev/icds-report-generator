@@ -7,7 +7,7 @@ import type { AppData } from '../domain/month';
 import { localizeLabel } from '../i18n/labels';
 import { rememberLanguage, storedLanguage, translator } from '../i18n/lang';
 import type { StringKey } from '../i18n/strings';
-import { AuthPage } from '../pages/AuthPage';
+import { PublicSite } from '../pages/PublicSite';
 
 interface AppState {
   data: AppData;
@@ -86,7 +86,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   let content: ReactNode;
   if (auth.status === 'loading' || (auth.status === 'ready' && !data)) content = <Spinner />;
-  else if (auth.status === 'anonymous') content = <AuthPage onAuthenticated={enter} />;
+  else if (auth.status === 'anonymous') content = <PublicSite onAuthenticated={enter} />;
   else content = <Ctx.Provider value={{ data: data!, lang, t: translator(lang), label: (text) => localizeLabel(text, lang), user: auth.user, logout }}>{children}</Ctx.Provider>;
 
   return (
