@@ -46,7 +46,6 @@ const strings = {
   itemDal: { bn: 'ডাল', en: 'Dal' },
   itemOil: { bn: 'তেল', en: 'Oil' },
   itemSalt: { bn: 'লবণ', en: 'Salt' },
-  itemTurmeric: { bn: 'হলুদ', en: 'Turmeric' },
   fuelSpicesTitle: { bn: 'জ্বালানী ও মশলা', en: 'Fuel & spices' },
   itemsTitle: { bn: 'দ্রব্য ও দর', en: 'Items & rates' },
   itemsHint: {
@@ -277,8 +276,8 @@ const strings = {
   noStateHolidays: { bn: 'এই বছরের কোনো ছুটি নেই', en: 'No holidays for this year' },
   fuelPerCookingDay: { bn: 'প্রতি রান্নার দিনের জ্বালানী ও মশলা খরচ (টাকা)', en: 'Fuel & spices per cooking day (Rs)' },
   fuelPerCookingDayHint: {
-    bn: 'জ্বালানী বিলের প্রতিটি রান্নার দিনের সারিতে এই টাকা বসে, মাসের মোট = টাকা × রান্নার দিন। না লাগলে ০ রাখুন।',
-    en: 'Printed on every cooking-day row of the fuel bill; the month total is this × cooking days. Leave 0 if not used.',
+    bn: 'জ্বালানী আর হলুদের মতো মশলা এই টাকা থেকেই কেনা হয়। জ্বালানী বিলের প্রতিটি রান্নার দিনের সারিতে এই টাকা বসে, মাসের মোট = টাকা × রান্নার দিন। না লাগলে ০ রাখুন।',
+    en: 'Covers fuel and spices such as turmeric. Printed on every cooking-day row of the fuel bill; the month total is this × cooking days. Leave 0 if not used.',
   },
   fuelDailyLine: { bn: 'প্রতি রান্নার দিন', en: 'Per cooking day' },
   language: { bn: 'ভাষা', en: 'Language' },
@@ -328,8 +327,8 @@ const strings = {
   },
   featStockTitle: { bn: 'মজুত খাতা', en: 'Stock ledger' },
   featStock: {
-    bn: 'চাল, ডাল, তেল, লবণ ও হলুদ — চালানের প্রাপ্তি, রোজকার খরচ আর মজুত পরের মাসে নিজে থেকে যায়।',
-    en: 'Rice, dal, oil, salt and turmeric — challan receipts, daily use and a balance that carries into the next month.',
+    bn: 'চাল, ডাল, তেল ও লবণ — চালানের প্রাপ্তি, রোজকার খরচ আর মজুত পরের মাসে নিজে থেকে যায়।',
+    en: 'Rice, dal, oil and salt — challan receipts, daily use and a balance that carries into the next month.',
   },
   featHolidaysTitle: { bn: 'ছুটির হিসাব', en: 'Holidays handled' },
   featHolidays: {

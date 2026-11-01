@@ -1,6 +1,6 @@
 import type { ObjectId } from 'mongodb';
-import { TURMERIC_PER_HEAD, defaultCategories, defaultSettings } from '../../src/db/defaults';
-import { MEAL_TYPES, type CenterInfo, type Settings } from '../../src/db/schema';
+import { defaultCategories, defaultSettings } from '../../src/db/defaults';
+import type { CenterInfo, Settings } from '../../src/db/schema';
 import type { Collections } from './db';
 
 /** Default injection for a new or reset account: shared norms, rates and categories; the centre is the user's own. */
@@ -19,11 +19,14 @@ export async function seedUser(
 export async function backfillDefaultSettings(c: Collections): Promise<void> {
   const { fuelPerCookingDay } = defaultSettings();
   await c.settings.updateMany({ fuelPerCookingDay: { $exists: false } }, { $set: { fuelPerCookingDay } });
-  for (const meal of MEAL_TYPES) {
-    const field = `norms.${meal}.turmeric`;
-    await c.categories.updateMany({ [field]: { $exists: false }, servesMeal: true }, { $set: { [field]: TURMERIC_PER_HEAD } });
-    await c.categories.updateMany({ [field]: { $exists: false } }, { $set: { [field]: 0 } });
-  }
+  // Turmeric is a spice paid from the daily fuel amount, no longer a stock item.
+  const turmericNorms = ['norms.khichuri.turmeric', 'norms.rice.turmeric'];
+  await c.categories.updateMany(
+    { $or: turmericNorms.map((field) => ({ [field]: { $exists: true } })) },
+    { $unset: Object.fromEntries(turmericNorms.map((field) => [field, ''])) } as never,
+  );
+  await c.monthMetas.updateMany({ 'openingStock.turmeric': { $exists: true } }, { $unset: { 'openingStock.turmeric': '' } });
+  await c.receipts.deleteMany({ item: 'turmeric' as never });
 }
 
 /**

@@ -125,7 +125,7 @@ export interface FuelLine {
 const FUEL_REGISTER_SUPPLIES: { id: string; name: string; unit: string; items: StockItemKey[] }[] = [
   { id: 'csb', name: 'সি.এস.বি. / চাল / ডাল (CSB / Rice / Dal)', unit: 'Kg', items: ['rice', 'dal'] },
   { id: 'oil', name: 'স্যাঃ তেল / সঃ তেল (Oil)', unit: 'Lit', items: ['oil'] },
-  { id: 'spices', name: 'হলুদ / লবণ (Turmeric / Salt)', unit: 'Kg', items: ['turmeric', 'salt'] },
+  { id: 'salt', name: 'লবণ (Salt)', unit: 'Kg', items: ['salt'] },
 ];
 
 export interface ReportPeriod {

@@ -7,7 +7,6 @@ export const ITEM_LABEL: Record<ItemKey, StringKey> = {
   dal: 'itemDal',
   oil: 'itemOil',
   salt: 'itemSalt',
-  turmeric: 'itemTurmeric',
   egg: 'itemEgg',
   veg: 'itemVeg',
   potato: 'itemPotato',

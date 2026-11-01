@@ -25,7 +25,7 @@ const REGISTER_SHOTS: { src: string; caption: StringKey; width: number; height: 
   { src: '/showcase/voucher.webp', caption: 'shotVoucher', width: 894, height: 571 },
   { src: '/showcase/fuel-register.webp', caption: 'shotFuel', width: 1098, height: 1150 },
   { src: '/showcase/snp-register.webp', caption: 'shotSnp', width: 1400, height: 652, wide: true },
-  { src: '/showcase/stock-register.webp', caption: 'shotStockRegister', width: 1600, height: 419, wide: true },
+  { src: '/showcase/stock-register.webp', caption: 'shotStockRegister', width: 1600, height: 457, wide: true },
 ];
 
 export function ShowcaseIntro({ t }: { t: T }) {

@@ -220,18 +220,22 @@ describe.skipIf(!MONGO_URL)('API', () => {
     expect((await c.settings.findOne({ userId: changed }))?.fuelPerCookingDay).toBe(50);
   });
 
-  it('backfills turmeric norms without overwriting what users set', async () => {
+  it('drops turmeric from norms, opening stock and receipts: it is a spice paid from the fuel amount', async () => {
     const c = collections(client.db(dbName));
     const userId = new ObjectId();
-    const legacy = defaultCategories().map((cat) => {
-      const { turmeric: _k, ...khichuri } = cat.norms.khichuri;
-      const { turmeric: _r, ...rice } = cat.norms.rice;
-      return { ...cat, norms: { khichuri: cat.id === 'pregnant' ? { ...khichuri, turmeric: 2 } : khichuri, rice }, userId };
-    });
+    const legacy = defaultCategories().map((cat) => ({
+      ...cat,
+      norms: { khichuri: { ...cat.norms.khichuri, turmeric: 0.5 }, rice: { ...cat.norms.rice, turmeric: 0.5 } },
+      userId,
+    }));
     await c.categories.insertMany(legacy as never);
+    await c.monthMetas.insertOne({ month: '2026-10', openingStock: { rice: 1000, turmeric: 200 }, userId } as never);
+    await c.receipts.insertOne({ id: 'r-t', date: '2026-10-05', item: 'turmeric', quantity: 500, userId } as never);
     await backfillDefaultSettings(c);
-    const after = await c.categories.find({ userId }).sort({ sortOrder: 1 }).toArray();
-    expect(after.map((cat) => [cat.norms.khichuri.turmeric, cat.norms.rice.turmeric])).toEqual([[2, 0.5], [0.5, 0.5], [0, 0], [0.5, 0.5], [0.5, 0.5]]);
+    const after = await c.categories.find({ userId }).toArray();
+    expect(after.every((cat) => !('turmeric' in cat.norms.khichuri) && !('turmeric' in cat.norms.rice))).toBe(true);
+    expect((await c.monthMetas.findOne({ userId }))?.openingStock).toEqual({ rice: 1000 });
+    expect(await c.receipts.countDocuments({ userId })).toBe(0);
   });
 
   it('imports a backup, protects referenced beneficiaries and resets to defaults', async () => {

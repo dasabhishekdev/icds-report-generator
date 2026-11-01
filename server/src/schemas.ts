@@ -36,13 +36,13 @@ const items = z.strictObject({
   dal: amount,
   oil: amount,
   salt: amount,
-  /** Absent in categories saved before turmeric was tracked. */
-  turmeric: amount.default(0),
+  /** Turmeric is a spice paid from the daily fuel amount: accepted from older data, then dropped. */
+  turmeric: amount.optional(),
   egg: amount,
   veg: amount,
   potato: amount,
   chatu: amount,
-});
+}).transform(({ turmeric: _turmeric, ...quantities }) => quantities);
 
 export const categorySchema = z.strictObject({
   id: idSchema,
@@ -101,7 +101,7 @@ const receiptFields = {
 
 export const receiptSchema = z.strictObject({
   ...receiptFields,
-  item: z.enum(['rice', 'dal', 'oil', 'salt', 'turmeric']),
+  item: z.enum(['rice', 'dal', 'oil', 'salt']),
 }) satisfies z.ZodType<StockReceipt>;
 
 /** Chatu is bought, not received: chatu receipts in older backups are accepted and dropped. */
@@ -118,11 +118,11 @@ export const monthMetaSchema = z.strictObject({
       dal: amount.optional(),
       oil: amount.optional(),
       salt: amount.optional(),
-      turmeric: amount.optional(),
       /** Accepted from older clients and backups, then dropped. */
+      turmeric: amount.optional(),
       chatu: amount.optional(),
     })
-    .transform(({ chatu: _chatu, ...stock }) => stock)
+    .transform(({ chatu: _chatu, turmeric: _turmeric, ...stock }) => stock)
     .optional(),
   fuelOverrides: z
     .array(z.strictObject({ fuelItemId: idSchema, quantity: amount.optional(), rate: amount.optional() }))

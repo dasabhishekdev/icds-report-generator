@@ -8,8 +8,8 @@ import { REPORT_TITLES } from './titles';
 
 /** First column (1-based) of each item's receipt / consumption / balance triple. */
 const CHATU_COL = 18;
-const STOCK_COL: Record<StockItemKey, number> = { rice: 21, dal: 24, oil: 27, salt: 30, turmeric: 33 };
-const LAST_COL = colLetter(STOCK_COL.turmeric + 2);
+const STOCK_COL: Record<StockItemKey, number> = { rice: 21, dal: 24, oil: 27, salt: 30 };
+const LAST_COL = colLetter(STOCK_COL.salt + 2);
 const BN_DIGITS = '০১২৩৪৫৬৭৮৯';
 /** Receipts, use and balances are quantities in grams, never money. */
 const GRAMS = 'গ্রাম (g)';
@@ -21,7 +21,7 @@ export function buildStockRegister(summary: MonthSummary, settings: Settings): S
     name: `Stock_Consumption_${periodSlug(summary)}`,
     fileName: `4_AWC_${c.number}_Stock_Consumption_Register_${periodSlug(summary)}`,
     title: REPORT_TITLES.stock,
-    colWidths: [12, 12, ...Array(33).fill(11)],
+    colWidths: [12, 12, ...Array(30).fill(11)],
     landscape: true,
   });
 
@@ -64,7 +64,7 @@ export function buildStockRegister(summary: MonthSummary, settings: Settings): S
   b.height(4, 36);
 
   const first = 5;
-  const lastBalance: Record<StockItemKey, string> = { rice: '', dal: '', oil: '', salt: '', turmeric: '' };
+  const lastBalance: Record<StockItemKey, string> = { rice: '', dal: '', oil: '', salt: '' };
   summary.rows.forEach((row, i) => {
     const r = first + i;
     b.height(r, 18);

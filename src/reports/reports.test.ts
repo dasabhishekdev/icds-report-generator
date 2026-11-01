@@ -73,11 +73,9 @@ describe('September 2026 reports', () => {
     expect(v(stock, 'T35')).toBeNull();
   });
 
-  it('stock register carries government-supplied turmeric', () => {
-    expect(v(stock, 'AG3')).toBe('খাদ্য সামগ্রী-৭: হলুদ (Turmeric) [OB: 1000 গ্রাম (g)]');
-    expect(v(stock, 'AH5')).toBe(20);
-    expect(v(stock, 'AI34')).toBe(455.5);
-    expect(v(stock, 'AH35')).toBe(544.5);
+  it('stock register ends with salt: turmeric is a spice, not a stock item', () => {
+    expect(v(stock, 'AD3')).toContain('লবন (Salt)');
+    expect(stock.cells.get('AG3')).toBeUndefined();
   });
 
   it('fuel register item table is the daily bill and the government supplies used', () => {
@@ -92,7 +90,7 @@ describe('September 2026 reports', () => {
       null,
     ]);
     expect(v(fuel, 'C43')).toBe('2.18 Lit');
-    expect(v(fuel, 'C44')).toBe('2.72 Kg');
+    expect([v(fuel, 'A44'), v(fuel, 'C44')]).toEqual(['লবণ (Salt)', '2.18 Kg']);
     expect([v(fuel, 'A45'), v(fuel, 'E45'), v(fuel, 'F45')]).toEqual(['মোট (Total)', 1186, 65]);
   });
 

@@ -2,12 +2,12 @@ export type MealType = 'khichuri' | 'rice';
 export const MEAL_TYPES: readonly MealType[] = ['khichuri', 'rice'];
 
 /** Everything that is allotted per head. Quantities are grams, except egg which is pieces. */
-export type ItemKey = 'rice' | 'dal' | 'oil' | 'salt' | 'turmeric' | 'egg' | 'veg' | 'potato' | 'chatu';
-export const ITEM_KEYS: readonly ItemKey[] = ['rice', 'dal', 'oil', 'salt', 'turmeric', 'egg', 'veg', 'potato', 'chatu'];
+export type ItemKey = 'rice' | 'dal' | 'oil' | 'salt' | 'egg' | 'veg' | 'potato' | 'chatu';
+export const ITEM_KEYS: readonly ItemKey[] = ['rice', 'dal', 'oil', 'salt', 'egg', 'veg', 'potato', 'chatu'];
 
 /** Items supplied by the government (no rate) and carried as a balance in the stock register (grams). */
-export type StockItemKey = 'rice' | 'dal' | 'oil' | 'salt' | 'turmeric';
-export const STOCK_ITEM_KEYS: readonly StockItemKey[] = ['rice', 'dal', 'oil', 'salt', 'turmeric'];
+export type StockItemKey = 'rice' | 'dal' | 'oil' | 'salt';
+export const STOCK_ITEM_KEYS: readonly StockItemKey[] = ['rice', 'dal', 'oil', 'salt'];
 export const isStockItem = (item: string): item is StockItemKey => (STOCK_ITEM_KEYS as readonly string[]).includes(item);
 
 /** Items bought from the shop and paid for through the nutrition voucher. */
