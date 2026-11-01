@@ -1,9 +1,11 @@
 import type { Settings } from '../db/schema';
 import { dotted } from '../domain/dates';
 import type { MonthSummary } from '../domain/month';
-import { periodSlug, trimNum } from './common';
+import { inr, periodSlug, trimNum } from './common';
 import { S, SheetBuilder, type SheetModel } from './sheet';
 import { REPORT_TITLES } from './titles';
+
+const perGrams = (g: number) => (g === 1000 ? 'Kg' : `${trimNum(g)} গ্রাম`);
 
 export function buildNutritionVoucher(summary: MonthSummary, settings: Settings): SheetModel {
   const c = settings.center;
@@ -65,19 +67,19 @@ export function buildNutritionVoucher(summary: MonthSummary, settings: Settings)
 
   const grams = (g: number) => `গ্রাম (Grams) [${(g / 1000).toFixed(3)} Kg]`;
   const lines = [
-    { name: 'ডিম (Eggs)', p: purchase.egg, unit: 'টি (Pcs)', perKg: false },
-    { name: 'সবজী (Vegetables)', p: purchase.veg, unit: grams(purchase.veg.quantity), perKg: true },
-    { name: 'আলু (Potato)', p: purchase.potato, unit: grams(purchase.potato.quantity), perKg: true },
-    { name: 'ছাতু (Chatu / Roasted Gram Flour)', p: purchase.chatu, unit: grams(purchase.chatu.quantity), perKg: true },
+    { name: 'ডিম (Eggs)', p: purchase.egg, unit: 'টি (Pcs)', per: 'টি' },
+    { name: 'সবজী (Vegetables)', p: purchase.veg, unit: grams(purchase.veg.quantity), per: perGrams(purchase.veg.per) },
+    { name: 'আলু (Potato)', p: purchase.potato, unit: grams(purchase.potato.quantity), per: perGrams(purchase.potato.per) },
+    { name: 'ছাতু (Chatu / Roasted Gram Flour)', p: purchase.chatu, unit: grams(purchase.chatu.quantity), per: perGrams(purchase.chatu.per) },
   ];
   lines.forEach((line, i) => {
     const r = 12 + i;
     b.set(`A${r}`, i + 1)
       .set(`B${r}`, line.name, S.text)
-      .set(`C${r}`, line.p.rate, S.money)
+      .set(`C${r}`, `${inr(line.p.rate)} / ${line.per}`, S.cell)
       .set(`D${r}`, line.p.quantity)
       .set(`E${r}`, line.unit, S.text)
-      .set(`F${r}`, line.p.cost, S.money, line.perKg ? `ROUND(C${r}*D${r}/1000,2)` : `ROUND(C${r}*D${r},2)`)
+      .set(`F${r}`, line.p.cost, S.money, `ROUND(D${r}*${line.p.rate}/${line.p.per},2)`)
       .height(r, 22);
   });
   b.mergeSet('A16:E16', 'মোট খরচ (Total Expenditure)', S.totalLeft)

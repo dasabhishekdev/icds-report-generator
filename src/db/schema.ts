@@ -13,6 +13,9 @@ export const isStockItem = (item: string): item is StockItemKey => (STOCK_ITEM_K
 /** Items bought from the shop and paid for through the nutrition voucher. */
 export type PurchasedItemKey = 'egg' | 'veg' | 'potato' | 'chatu';
 export const PURCHASED_ITEM_KEYS: readonly PurchasedItemKey[] = ['egg', 'veg', 'potato', 'chatu'];
+/** Bought items priced by weight; egg is priced per piece. */
+export type WeighedItemKey = Exclude<PurchasedItemKey, 'egg'>;
+export const WEIGHED_ITEM_KEYS: readonly WeighedItemKey[] = ['veg', 'potato', 'chatu'];
 
 export type ItemQuantities = Record<ItemKey, number>;
 export type Norms = Record<MealType, ItemQuantities>;
@@ -138,8 +141,10 @@ export interface Settings {
   id: 'settings';
   language: Language;
   center: CenterInfo;
-  /** Egg: Rs per piece. Vegetables, potato, chatu: Rs per kg. */
+  /** Egg: Rs per piece. Vegetables, potato, chatu: Rs for `rateGrams` grams. */
   rates: Record<PurchasedItemKey, number>;
+  /** Grams each weighed rate is for, as written on paper (chatu ₹1.67 for 10.44 g). Absent means per kg. */
+  rateGrams?: Partial<Record<WeighedItemKey, number>>;
   nursingMonths: number;
   /** 0 = Sunday … 6 = Saturday */
   weeklyOffDays: number[];

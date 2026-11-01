@@ -28,6 +28,7 @@ export const monthSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
 
 const text = (max: number) => z.string().max(max);
 const amount = z.number().finite().min(0).max(1e9);
+const grams = z.number().finite().positive().max(1e6);
 const timestamp = z.number().int().min(0).max(1e14);
 
 const items = z.strictObject({
@@ -145,6 +146,7 @@ const settingsFields = {
   language: z.enum(['bn', 'en']),
   center: centerSchema,
   rates: z.strictObject({ egg: amount, veg: amount, potato: amount, chatu: amount }),
+  rateGrams: z.strictObject({ veg: grams.optional(), potato: grams.optional(), chatu: grams.optional() }).optional(),
   nursingMonths: z.number().int().min(1).max(36),
   weeklyOffDays: z.array(z.number().int().min(0).max(6)).max(7),
   fuelItems: z

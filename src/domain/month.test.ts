@@ -17,7 +17,7 @@ describe('September 2026 sample (AWC 547)', () => {
     expect(summary.purchase.egg.quantity).toBe(833.5);
     expect(summary.purchase.veg.quantity).toBe(11108);
     expect(summary.purchase.potato.quantity).toBe(34970);
-    expect(summary.purchase.chatu.quantity).toBe(4710);
+    expect(summary.purchase.chatu.quantity).toBe(4917.24);
   });
 
   it('prices the voucher exactly', () => {

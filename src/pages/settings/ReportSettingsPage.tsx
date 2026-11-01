@@ -12,8 +12,10 @@ import {
   type MealType,
   type Settings,
   type StateHolidayMode,
+  type WeighedItemKey,
+  WEIGHED_ITEM_KEYS,
 } from '../../db/schema';
-import { itemCost } from '../../domain/calc';
+import { itemCost, rateGramsFor } from '../../domain/calc';
 import { WEEKDAYS_BN, WEEKDAYS_EN, formatMonths, prettyDate, todayIso } from '../../domain/dates';
 import { stateHolidayMode, type HolidaySource } from '../../domain/holidays';
 import type { StringKey } from '../../i18n/strings';
@@ -108,22 +110,46 @@ function NursingPeriodCard({ onSaved }: { onSaved: (ok: boolean) => void }) {
 function RatesCard({ onSaved }: { onSaved: (ok: boolean) => void }) {
   const { t, data } = useApp();
   const [rates, setRates] = useState(data.settings.rates);
-  const fields: { key: keyof Settings['rates']; label: StringKey }[] = [
-    { key: 'egg', label: 'eggRate' },
-    { key: 'veg', label: 'vegRate' },
-    { key: 'potato', label: 'potatoRate' },
-    { key: 'chatu', label: 'chatuRate' },
-  ];
+  const [grams, setGrams] = useState<Record<WeighedItemKey, number | undefined>>(
+    () => Object.fromEntries(WEIGHED_ITEM_KEYS.map((item) => [item, rateGramsFor(data.settings, item)])) as Record<WeighedItemKey, number>,
+  );
+  const valid = WEIGHED_ITEM_KEYS.every((item) => (grams[item] ?? 0) > 0);
+  const save = () => {
+    const rateGrams = Object.fromEntries(WEIGHED_ITEM_KEYS.map((item) => [item, grams[item]!])) as Record<WeighedItemKey, number>;
+    void saveSettings({ rates, rateGrams }).then(onSaved);
+  };
   return (
     <Card title={t('rates')} hint={t('hintRates')}>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {fields.map(({ key, label }) => (
-          <Field key={key} label={t(label)}>
-            <NumberInput value={rates[key]} onChange={(v) => setRates({ ...rates, [key]: v ?? 0 })} />
-          </Field>
-        ))}
+      <div className="space-y-3">
+        <div className="grid grid-cols-[6rem_1fr_auto_1fr] items-center gap-2">
+          <span className="font-medium text-slate-700">{t('itemEgg')}</span>
+          <span className="text-sm text-slate-600">1 {t('pcs')}</span>
+          <span className="text-slate-500">= ₹</span>
+          <NumberInput value={rates.egg} onChange={(v) => setRates({ ...rates, egg: v ?? 0 })} />
+        </div>
+        {WEIGHED_ITEM_KEYS.map((item) => {
+          const g = grams[item] ?? 0;
+          return (
+            <div key={item}>
+              <div className="grid grid-cols-[6rem_1fr_auto_1fr] items-center gap-2">
+                <span className="font-medium text-slate-700">{t(ITEM_LABEL[item])}</span>
+                <div className="flex items-center gap-1">
+                  <NumberInput value={grams[item]} onChange={(v) => setGrams({ ...grams, [item]: v })} />
+                  <span className="text-sm text-slate-500">{t('grams')}</span>
+                </div>
+                <span className="text-slate-500">= ₹</span>
+                <NumberInput value={rates[item]} onChange={(v) => setRates({ ...rates, [item]: v ?? 0 })} />
+              </div>
+              {g > 0 && g !== 1000 && (
+                <p className="mt-0.5 text-right text-xs text-slate-500 tabular-nums">
+                  = {rupees((rates[item] * 1000) / g)} / kg
+                </p>
+              )}
+            </div>
+          );
+        })}
       </div>
-      <Button variant="primary" className="mt-4" onClick={() => void saveSettings({ rates }).then(onSaved)}>
+      <Button variant="primary" className="mt-4" disabled={!valid} onClick={save}>
         {t('save')}
       </Button>
     </Card>
@@ -141,7 +167,7 @@ function CategoriesCard() {
   /** Bought items per head for one meal, e.g. "Egg 1 pcs = ₹8.50 · Potato 30 g = ₹0.84". */
   const mealMoney = (c: Category, meal: MealType) =>
     PURCHASED_ITEM_KEYS.filter((item) => c.norms[meal][item] > 0)
-      .map((item) => `${t(ITEM_LABEL[item])} ${formatQty(item, c.norms[meal][item], t)} = ${rupees(itemCost(item, c.norms[meal][item], data.settings.rates))}`)
+      .map((item) => `${t(ITEM_LABEL[item])} ${formatQty(item, c.norms[meal][item], t)} = ${rupees(itemCost(item, c.norms[meal][item], data.settings))}`)
       .join(' · ');
 
   const addNew = () => {

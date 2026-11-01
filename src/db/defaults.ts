@@ -17,7 +17,7 @@ const motherNorms: Norms = {
 
 const childNorms: Norms = {
   khichuri: { rice: 75, dal: 30, oil: 2, salt: 2, turmeric: TURMERIC_PER_HEAD, egg: 0.5, veg: 20.5, potato: 60, chatu: 0 },
-  rice: { rice: 50, dal: 0, oil: 2, salt: 2, turmeric: TURMERIC_PER_HEAD, egg: 1, veg: 0, potato: 0, chatu: 10 },
+  rice: { rice: 50, dal: 0, oil: 2, salt: 2, turmeric: TURMERIC_PER_HEAD, egg: 1, veg: 0, potato: 0, chatu: 10.44 },
 };
 
 const cloneNorms = (n: Norms): Norms => ({ khichuri: { ...n.khichuri }, rice: { ...n.rice } });
@@ -65,7 +65,8 @@ export function defaultSettings(center: Partial<CenterInfo> = {}): Settings {
     id: 'settings',
     language: 'bn',
     center: { ...emptyCenter(), ...center },
-    rates: { egg: 8.5, veg: 20, potato: 28, chatu: 167 },
+    rates: { egg: 8.5, veg: 0.41, potato: 1.68, chatu: 1.67 },
+    rateGrams: { veg: 20.5, potato: 60, chatu: 10.44 },
     nursingMonths: 6,
     weeklyOffDays: [0],
     fuelItems: [

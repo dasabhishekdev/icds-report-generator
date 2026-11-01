@@ -87,6 +87,8 @@ export function registerDataRoutes(app: FastifyInstance, c: Collections, holiday
   app.patch('/api/settings', auth, async (request) => {
     const userId = uid(request);
     const patch = settingsPatchSchema.parse(request.body);
+    // Clients that predate rateGrams send per-kg rates on their own.
+    if (patch.rates && !patch.rateGrams) patch.rateGrams = {};
     await c.settings.updateOne({ userId }, { $set: patch });
     return (await loadUserData(c, holidays, userId)).settings;
   });

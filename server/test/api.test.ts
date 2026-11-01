@@ -58,7 +58,8 @@ describe.skipIf(!MONGO_URL)('API', () => {
     expect(res.statusCode).toBe(200);
     const data = res.json();
     expect(data.settings.center).toMatchObject({ name: 'Alpha Centre', number: '777', workerName: 'Worker alpha@example.com' });
-    expect(data.settings.rates).toEqual({ egg: 8.5, veg: 20, potato: 28, chatu: 167 });
+    expect(data.settings.rates).toEqual({ egg: 8.5, veg: 0.41, potato: 1.68, chatu: 1.67 });
+    expect(data.settings.rateGrams).toEqual({ veg: 20.5, potato: 60, chatu: 10.44 });
     expect(data.settings.language).toBe('bn');
     expect(data.categories.map((c: { id: string }) => c.id)).toEqual(['pregnant', 'nursing', 'child-0-6m', 'child-6m-3y', 'child-3y-6y']);
     expect(data.categories[3].norms.khichuri).toMatchObject({ rice: 75, egg: 0.5, veg: 20.5 });
@@ -149,6 +150,12 @@ describe.skipIf(!MONGO_URL)('API', () => {
     expect((await call(cookie, 'PATCH', '/api/settings', patch)).json()).toMatchObject(patch);
     expect((await call(cookie, 'PATCH', '/api/settings', { stateHolidays: 'sometimes' })).statusCode).toBe(400);
 
+    const paperRates = { rates: { egg: 8.5, veg: 0.41, potato: 1.68, chatu: 1.67 }, rateGrams: { veg: 20.5, potato: 60, chatu: 10.44 } };
+    expect((await call(cookie, 'PATCH', '/api/settings', paperRates)).json()).toMatchObject(paperRates);
+    expect((await call(cookie, 'PATCH', '/api/settings', { rateGrams: { chatu: 0 } })).statusCode).toBe(400);
+    const perKg = (await call(cookie, 'PATCH', '/api/settings', { rates: { egg: 9, veg: 20, potato: 28, chatu: 160 } })).json();
+    expect(perKg.rateGrams).toEqual({});
+
     const noDob = { id: 'kid-x', kind: 'child', name: 'No DOB', gender: 'F', enrolledOn: '2026-01-01' };
     expect((await call(cookie, 'PUT', '/api/beneficiaries/kid-x', noDob)).statusCode).toBe(200);
     expect((await call(cookie, 'GET', '/api/data')).json().beneficiaries).toEqual([noDob]);
@@ -181,7 +188,8 @@ describe.skipIf(!MONGO_URL)('API', () => {
     expect(res.statusCode).toBe(200);
     const data = res.json();
     expect(data.settings).toMatchObject({
-      rates: { egg: 8.5, veg: 20, potato: 28, chatu: 167 },
+      rates: { egg: 8.5, veg: 0.41, potato: 1.68, chatu: 1.67 },
+      rateGrams: { veg: 20.5, potato: 60, chatu: 10.44 },
       weeklyOffDays: [0],
       stateHolidays: 'all',
       fuelPerCookingDay: 43.95,

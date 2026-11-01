@@ -8,6 +8,7 @@ import {
   type DayRecord,
   type MealType,
   type MonthMeta,
+  type PurchasedItemKey,
   type Settings,
   type StockItemKey,
   type StockReceipt,
@@ -20,6 +21,8 @@ import {
   dayCosts,
   dayRation,
   emptyCounts,
+  itemCost,
+  rateGramsFor,
   round2,
   STOCK_AGE_BANDS,
   zeroItems,
@@ -136,7 +139,8 @@ export interface MonthSummary {
   lastDate: string;
   totals: { counts: DayCounts; ration: Ration; costs: DayCosts };
   meals: Record<MealType, { mother: number; child: number }>;
-  purchase: Record<'egg' | 'veg' | 'potato' | 'chatu', { quantity: number; rate: number; cost: number }>;
+  /** `rate` is Rs for `per` pieces (egg) or grams. */
+  purchase: Record<PurchasedItemKey, { quantity: number; rate: number; per: number; cost: number }>;
   purchaseTotal: number;
   opening: StockQuantities;
   closing: StockQuantities;
@@ -233,7 +237,7 @@ function buildRows(dates: readonly string[], ctx: Context): DayRow[] {
       submitted: submissionState(record) === 'submitted',
       counts,
       ration,
-      costs: dayCosts(ration, settings.rates),
+      costs: dayCosts(ration, settings),
       fuel: served ? (settings.fuelPerCookingDay ?? 0) : 0,
       receipts: dayReceipts,
       consumption,
@@ -349,17 +353,22 @@ export function buildPeriodSummary(from: string, to: string, data: AppData): Mon
     meals[r.meal!].child += r.counts.children;
   }
 
-  const { rates } = data.settings;
-  const purchaseLine = (quantity: number, rate: number, perUnit: number) => ({
-    quantity,
-    rate,
-    cost: round2(quantity * perUnit),
-  });
+  const pricing = data.settings;
+  const purchaseLine = (item: PurchasedItemKey) => {
+    const quantity = totals.ration.total[item];
+    return {
+      quantity,
+      rate: pricing.rates[item],
+      /** Pieces (egg) or grams the rate is for. */
+      per: item === 'egg' ? 1 : rateGramsFor(pricing, item),
+      cost: itemCost(item, quantity, pricing),
+    };
+  };
   const purchase = {
-    egg: purchaseLine(totals.ration.total.egg, rates.egg, rates.egg),
-    veg: purchaseLine(totals.ration.total.veg, rates.veg, rates.veg / 1000),
-    potato: purchaseLine(totals.ration.total.potato, rates.potato, rates.potato / 1000),
-    chatu: purchaseLine(totals.ration.total.chatu, rates.chatu, rates.chatu / 1000),
+    egg: purchaseLine('egg'),
+    veg: purchaseLine('veg'),
+    potato: purchaseLine('potato'),
+    chatu: purchaseLine('chatu'),
   };
   const purchaseTotal = round2(purchase.egg.cost + purchase.veg.cost + purchase.potato.cost + purchase.chatu.cost);
   const fuel = fuelLines(period.fullMonth ? month : null, totals.counts.total, ctx);

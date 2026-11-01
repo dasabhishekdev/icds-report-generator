@@ -3,10 +3,10 @@ import { defaultCategories, defaultSettings } from '../db/defaults';
 import { PURCHASED_ITEM_KEYS, type MealType, type PurchasedItemKey } from '../db/schema';
 import { itemCost } from './calc';
 
-const { rates } = defaultSettings();
+const pricing = defaultSettings();
 const perHead = (categoryId: string, meal: MealType) => {
   const category = defaultCategories().find((c) => c.id === categoryId)!;
-  return Object.fromEntries(PURCHASED_ITEM_KEYS.map((item) => [item, itemCost(item, category.norms[meal][item], rates)])) as Record<
+  return Object.fromEntries(PURCHASED_ITEM_KEYS.map((item) => [item, itemCost(item, category.norms[meal][item], pricing)])) as Record<
     PurchasedItemKey,
     number
   >;

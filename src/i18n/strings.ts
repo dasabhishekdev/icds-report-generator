@@ -179,8 +179,8 @@ const strings = {
     en: 'Printed at the top of all four registers and on the voucher. Write it exactly as on official papers.',
   },
   hintRates: {
-    bn: 'দোকান থেকে কেনা জিনিসের দাম — ডিম প্রতি টি, সবজি, আলু ও ছাতু প্রতি কেজি। এই দরে ভাউচার ও SNP রেজিস্টারের টাকা হিসাব হয়। দাম বদলালে নতুন দর দিন।',
-    en: 'Prices of what you buy from the shop — egg per piece; vegetables, potato and chatu per kg. The voucher and SNP register amounts use these rates. Update them when prices change.',
+    bn: 'কাগজে যেমন লেখা থাকে তেমন দর দিন — ডিম প্রতি পিস; সবজি, আলু ও ছাতু কত গ্রাম কত টাকা (যেমন ১০.৪৪ গ্রাম = ১.৬৭ টাকা)। ভাউচার ও SNP রেজিস্টারের টাকা এই দরে হিসাব হয়।',
+    en: 'Enter prices as written on paper — egg per piece; vegetables, potato and chatu as grams for rupees (e.g. 10.44 g = ₹1.67). The voucher and SNP register amounts use these rates.',
   },
   hintCategories: {
     bn: 'কারা রান্না করা খাবার পান আর মাথাপিছু কতটা। শিশুরা বয়স অনুযায়ী নিজে থেকে বিভাগ বদলায়। ডিম, সবজি, আলু ও ছাতুর পাশে মাথাপিছু টাকা দেখানো হয়। খিচুড়ি ও ভাতের দিনের বরাদ্দ থেকেই রোজকার রেশন, মজুত খরচ ও রিপোর্ট হিসাব হয়।',
@@ -201,10 +201,6 @@ const strings = {
   vegShopkeeper: { bn: 'দোকানদার (সবজি ও ডিম)', en: 'Shopkeeper (veg & egg)' },
   fuelShopkeeper: { bn: 'দোকানদার (জ্বালানী ও মশলা)', en: 'Shopkeeper (fuel & spices)' },
   rates: { bn: 'দর (টাকা)', en: 'Rates (Rs)' },
-  eggRate: { bn: 'ডিম — প্রতি টি', en: 'Egg — per piece' },
-  vegRate: { bn: 'সবজি — প্রতি কেজি', en: 'Vegetables — per kg' },
-  potatoRate: { bn: 'আলু — প্রতি কেজি', en: 'Potato — per kg' },
-  chatuRate: { bn: 'ছাতু — প্রতি কেজি', en: 'Chatu — per kg' },
   categoriesNorms: { bn: 'বিভাগ ও মাথাপিছু বরাদ্দ', en: 'Categories & per-head norms' },
   normsHint: { bn: 'প্রতি জনের প্রতিদিনের বরাদ্দ (গ্রাম, ডিম টি-তে)। খিচুড়ি ও ভাতের দিনের জন্য আলাদা।', en: 'Per head per day (grams; eggs in pieces). Separate for khichuri and rice days.' },
   addCategory: { bn: 'নতুন বিভাগ', en: 'New category' },

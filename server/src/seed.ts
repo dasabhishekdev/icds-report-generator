@@ -38,10 +38,10 @@ export async function backfillDefaultSettings(c: Collections): Promise<void> {
  * the centre's own holidays and saved reports are untouched.
  */
 export async function restoreDefaultSetup(c: Collections, userId: ObjectId): Promise<void> {
-  const { rates, nursingMonths, weeklyOffDays, fuelItems, fuelPerCookingDay } = defaultSettings();
+  const { rates, rateGrams, nursingMonths, weeklyOffDays, fuelItems, fuelPerCookingDay } = defaultSettings();
   await c.settings.updateOne(
     { userId },
-    { $set: { rates, nursingMonths, weeklyOffDays, fuelItems, fuelPerCookingDay, stateHolidays: 'all' } },
+    { $set: { rates, rateGrams, nursingMonths, weeklyOffDays, fuelItems, fuelPerCookingDay, stateHolidays: 'all' } },
   );
   await c.categories.deleteMany({ userId });
   await c.categories.insertMany(defaultCategories().map((cat) => ({ ...cat, userId })));

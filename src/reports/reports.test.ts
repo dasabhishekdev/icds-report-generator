@@ -34,6 +34,14 @@ describe('September 2026 reports', () => {
     expect(v(voucher, 'F16')).toBe(9072.64);
   });
 
+  it('voucher prints each rate as written on paper and costs it from that', () => {
+    expect(v(voucher, 'C12')).toBe('8.50 / টি');
+    expect(v(voucher, 'C15')).toBe('1.67 / 10.44 গ্রাম');
+    expect(voucher.cells.get('F15')).toMatchObject({ value: 786.57, formula: 'ROUND(D15*1.67/10.44,2)' });
+    expect(v(voucher, 'C13')).toBe('0.41 / 20.5 গ্রাম');
+    expect(v(voucher, 'F13')).toBe(222.16);
+  });
+
   it('SNP register totals and footer', () => {
     expect(v(snp, 'B5')).toBe('খিচুড়ি (Kh)');
     expect(v(snp, 'K5')).toBe(182.75);
@@ -63,9 +71,9 @@ describe('September 2026 reports', () => {
   it('stock register shows chatu used but no receipts or balance', () => {
     expect(v(stock, 'R3')).toBe('খাদ্য সামগ্রী-২: ছাতু (Chatu) [ক্রয় - Bought]');
     expect(v(stock, 'S5')).toBeNull();
-    expect(v(stock, 'S6')).toBe(370);
+    expect(v(stock, 'S6')).toBe(386.28);
     expect(v(stock, 'T6')).toBeNull();
-    expect(stock.cells.get('S35')).toMatchObject({ value: 4710, formula: 'SUM(S5:S34)' });
+    expect(stock.cells.get('S35')).toMatchObject({ value: 4917.24, formula: 'SUM(S5:S34)' });
     expect(v(stock, 'T35')).toBeNull();
   });
 

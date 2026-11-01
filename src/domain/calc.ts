@@ -8,6 +8,7 @@ import {
   type MealType,
   type PurchasedItemKey,
   type Settings,
+  type WeighedItemKey,
 } from '../db/schema';
 import { ageGroupMonths } from './dates';
 import { resolveCategory } from './eligibility';
@@ -107,19 +108,27 @@ export interface DayCosts {
   total: number;
 }
 
-/** Money for one head's quantity of a bought item: eggs by the piece, the rest at the per-kg rate. */
-export const itemCost = (item: PurchasedItemKey, qty: number, rates: Settings['rates']): number =>
-  round2(item === 'egg' ? qty * rates.egg : (qty * rates[item]) / 1000);
+/** The price settings: egg per piece, weighed items for `rateGrams` grams (per kg when absent). */
+export type Pricing = Pick<Settings, 'rates' | 'rateGrams'>;
 
-export function dayCosts(ration: Ration, rates: Settings['rates']): DayCosts {
-  const perGram = (kgRate: number) => kgRate / 1000;
+/** Grams a weighed item's rate is for. */
+export const rateGramsFor = (pricing: Pricing, item: WeighedItemKey): number => pricing.rateGrams?.[item] || 1000;
+
+/** Unrounded money for a quantity of a bought item (pieces for egg, grams otherwise). */
+const rawCost = (item: PurchasedItemKey, qty: number, pricing: Pricing): number =>
+  item === 'egg' ? qty * pricing.rates.egg : (qty * pricing.rates[item]) / rateGramsFor(pricing, item);
+
+/** Money for a quantity of a bought item, rounded to paise. */
+export const itemCost = (item: PurchasedItemKey, qty: number, pricing: Pricing): number => round2(rawCost(item, qty, pricing));
+
+export function dayCosts(ration: Ration, pricing: Pricing): DayCosts {
   const c = {
-    motherVeg: round2(ration.mother.veg * perGram(rates.veg)),
-    motherPotato: round2(ration.mother.potato * perGram(rates.potato)),
-    chatu: round2(ration.total.chatu * perGram(rates.chatu)),
-    egg: round2(ration.total.egg * rates.egg),
-    childVeg: round2(ration.child.veg * perGram(rates.veg)),
-    childPotato: round2(ration.child.potato * perGram(rates.potato)),
+    motherVeg: itemCost('veg', ration.mother.veg, pricing),
+    motherPotato: itemCost('potato', ration.mother.potato, pricing),
+    chatu: itemCost('chatu', ration.total.chatu, pricing),
+    egg: itemCost('egg', ration.total.egg, pricing),
+    childVeg: itemCost('veg', ration.child.veg, pricing),
+    childPotato: itemCost('potato', ration.child.potato, pricing),
   };
   return { ...c, total: round2(c.motherVeg + c.motherPotato + c.chatu + c.egg + c.childVeg + c.childPotato) };
 }

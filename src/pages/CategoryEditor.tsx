@@ -154,7 +154,7 @@ export function CategoryEditor({ category, isNew, onDone }: { category: Category
                         <NumberInput value={c.norms[m][item]} onChange={(v) => setNorm(m, item, v)} className="py-1.5" />
                         {isPurchased(item) && (
                           <div className="mt-0.5 text-right text-xs text-slate-500 tabular-nums">
-                            = {rupees(itemCost(item, c.norms[m][item], data.settings.rates))}
+                            = {rupees(itemCost(item, c.norms[m][item], data.settings))}
                           </div>
                         )}
                       </td>

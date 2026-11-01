@@ -58,7 +58,7 @@ export function AttendancePage() {
   const beneficiaryMap = useMemo(() => new Map(beneficiaries.map((b) => [b.id, b])), [beneficiaries]);
   const counts = countPresent([...present], date, beneficiaryMap, categories, settings.nursingMonths);
   const ration = dayRation(meal, counts.byCategory, categories);
-  const costs = dayCosts(ration, settings.rates);
+  const costs = dayCosts(ration, settings);
 
   async function save(patch: Partial<DayRecord>) {
     const base: DayRecord = record ?? {
