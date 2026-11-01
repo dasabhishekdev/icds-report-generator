@@ -13,7 +13,8 @@ export default defineConfig({
       includeAssets: ['icon.svg'],
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,woff,woff2}'],
-        navigateFallbackDenylist: [/^\/api\//],
+        // Files opened directly (screenshots, robots.txt, sitemap.xml) must not be answered with the app shell.
+        navigateFallbackDenylist: [/^\/api\//, /\.[a-z0-9]+$/i],
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
       },
       manifest: {
