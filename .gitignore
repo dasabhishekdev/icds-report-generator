@@ -11,3 +11,7 @@ tmp
 !.env.example
 dist-server
 backups
+
+# Android signing key and its passwords: never commit
+android/*.keystore
+android/keystore-credentials.txt

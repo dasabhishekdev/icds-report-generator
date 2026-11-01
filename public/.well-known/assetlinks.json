@@ -1,0 +1,10 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.educoreva.icds",
+      "sha256_cert_fingerprints": ["FA:E1:56:38:E6:30:94:8B:4F:25:0E:37:9B:00:B4:79:F8:85:1C:58:C3:B5:1D:AD:3B:FC:68:18:AD:72:37:04"]
+    }
+  }
+]

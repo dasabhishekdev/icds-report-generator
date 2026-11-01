@@ -24,14 +24,23 @@ export default defineConfig({
         theme_color: '#0f766e',
         background_color: '#f8fafc',
         display: 'standalone',
+        id: '/',
         start_url: '/',
-        icons: [{ src: 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' }],
+        scope: '/',
+        // PNGs are needed by Android launchers and the Play Store; the SVG stays for browsers.
+        icons: [
+          { src: 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: 'icon-maskable-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+          { src: 'icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+        ],
         shortcuts: [
           {
             name: 'Jan Andolan photo',
             short_name: 'Jan Andolan',
             url: '/#/jan-andolan',
-            icons: [{ src: 'icon.svg', sizes: 'any', type: 'image/svg+xml' }],
+            icons: [{ src: 'icon-192.png', sizes: '192x192', type: 'image/png' }],
           },
         ],
       },
