@@ -22,6 +22,7 @@ import {
   emptyCounts,
   round2,
   STOCK_AGE_BANDS,
+  zeroItems,
   type DayCosts,
   type DayCounts,
   type Ration,
@@ -85,7 +86,7 @@ export function suggestMeal(date: string, days: readonly DayRecord[]): MealType 
 }
 
 export type StockQuantities = Record<StockItemKey, number>;
-const zeroStock = (): StockQuantities => ({ rice: 0, dal: 0, oil: 0, salt: 0 });
+const zeroStock = (): StockQuantities => Object.fromEntries(STOCK_ITEM_KEYS.map((k) => [k, 0])) as StockQuantities;
 
 export interface DayRow {
   date: string;
@@ -112,6 +113,8 @@ export interface FuelLine {
   quantity: number;
   rate: number;
   amount: number;
+  /** Government supply: rate and amount are always 0. */
+  govSupplied: boolean;
 }
 
 export interface ReportPeriod {
@@ -169,9 +172,9 @@ function sumCounts(rows: readonly DayRow[]): DayCounts {
 
 function sumRations(rows: readonly DayRow[]): Ration {
   const t: Ration = {
-    mother: { rice: 0, dal: 0, oil: 0, salt: 0, egg: 0, veg: 0, potato: 0, chatu: 0 },
-    child: { rice: 0, dal: 0, oil: 0, salt: 0, egg: 0, veg: 0, potato: 0, chatu: 0 },
-    total: { rice: 0, dal: 0, oil: 0, salt: 0, egg: 0, veg: 0, potato: 0, chatu: 0 },
+    mother: zeroItems(),
+    child: zeroItems(),
+    total: zeroItems(),
   };
   for (const r of rows) {
     for (const part of ['mother', 'child', 'total'] as const) {
@@ -317,8 +320,9 @@ function fuelLines(month: string | null, beneficiaryDays: number, ctx: Context):
   return ctx.data.settings.fuelItems.map((item) => {
     const o = meta?.fuelOverrides?.find((x) => x.fuelItemId === item.id);
     const quantity = o?.quantity ?? round2(item.qtyPerBeneficiaryDay * beneficiaryDays);
-    const rate = o?.rate ?? item.rate;
-    return { id: item.id, name: item.name, unit: item.unit, quantity, rate, amount: round2(quantity * rate) };
+    const govSupplied = item.govSupplied === true;
+    const rate = govSupplied ? 0 : (o?.rate ?? item.rate);
+    return { id: item.id, name: item.name, unit: item.unit, quantity, rate, amount: round2(quantity * rate), govSupplied };
   });
 }
 

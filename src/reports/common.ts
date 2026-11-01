@@ -52,6 +52,7 @@ export const STOCK_LABEL: Record<StockItemKey, string> = {
   dal: 'ডাল',
   oil: 'তেল',
   salt: 'লবন',
+  turmeric: 'হলুদ',
 };
 
 export const STOCK_LABEL_EN: Record<StockItemKey, string> = {
@@ -59,6 +60,7 @@ export const STOCK_LABEL_EN: Record<StockItemKey, string> = {
   dal: 'Dal',
   oil: 'Oil',
   salt: 'Salt',
+  turmeric: 'Turmeric',
 };
 
 export function stockUnit(item: StockItemKey): string {

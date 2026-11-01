@@ -1,6 +1,6 @@
 import type { ObjectId } from 'mongodb';
-import { defaultCategories, defaultSettings } from '../../src/db/defaults';
-import type { CenterInfo, Settings } from '../../src/db/schema';
+import { TURMERIC_PER_HEAD, defaultCategories, defaultSettings } from '../../src/db/defaults';
+import { MEAL_TYPES, type CenterInfo, type Settings } from '../../src/db/schema';
 import type { Collections } from './db';
 
 /** Default injection for a new or reset account: shared norms, rates and categories; the centre is the user's own. */
@@ -17,8 +17,19 @@ export async function seedUser(
 
 /** Gives every account the defaults for settings it does not have yet; values a user has set are kept. */
 export async function backfillDefaultSettings(c: Collections): Promise<void> {
-  const { fuelPerCookingDay } = defaultSettings();
+  const { fuelPerCookingDay, fuelItems } = defaultSettings();
   await c.settings.updateMany({ fuelPerCookingDay: { $exists: false } }, { $set: { fuelPerCookingDay } });
+  for (const meal of MEAL_TYPES) {
+    const field = `norms.${meal}.turmeric`;
+    await c.categories.updateMany({ [field]: { $exists: false }, servesMeal: true }, { $set: { [field]: TURMERIC_PER_HEAD } });
+    await c.categories.updateMany({ [field]: { $exists: false } }, { $set: { [field]: 0 } });
+  }
+  const govIds = fuelItems.filter((item) => item.govSupplied).map((item) => item.id);
+  await c.settings.updateMany(
+    { fuelItems: { $elemMatch: { id: { $in: govIds }, govSupplied: { $exists: false } } } },
+    { $set: { 'fuelItems.$[gov].govSupplied': true, 'fuelItems.$[gov].rate': 0 } },
+    { arrayFilters: [{ 'gov.id': { $in: govIds }, 'gov.govSupplied': { $exists: false } }] },
+  );
 }
 
 /**

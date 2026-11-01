@@ -76,7 +76,7 @@ export function countPresent(
 
 export type Ration = Record<CategoryGroup | 'total', ItemQuantities>;
 
-const zeroItems = (): ItemQuantities => ({ rice: 0, dal: 0, oil: 0, salt: 0, egg: 0, veg: 0, potato: 0, chatu: 0 });
+export const zeroItems = (): ItemQuantities => Object.fromEntries(ITEM_KEYS.map((k) => [k, 0])) as ItemQuantities;
 
 /** Total ration for a day = Σ (present in category × per-head norm for the meal). */
 export function dayRation(meal: MealType, byCategory: Record<string, number>, categories: readonly Category[]): Ration {

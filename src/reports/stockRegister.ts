@@ -8,7 +8,8 @@ import { REPORT_TITLES } from './titles';
 
 /** First column (1-based) of each item's receipt / consumption / balance triple. */
 const CHATU_COL = 18;
-const STOCK_COL: Record<StockItemKey, number> = { rice: 21, dal: 24, oil: 27, salt: 30 };
+const STOCK_COL: Record<StockItemKey, number> = { rice: 21, dal: 24, oil: 27, salt: 30, turmeric: 33 };
+const LAST_COL = colLetter(STOCK_COL.turmeric + 2);
 const BN_DIGITS = '০১২৩৪৫৬৭৮৯';
 /** Receipts, use and balances are quantities in grams, never money. */
 const GRAMS = 'গ্রাম (g)';
@@ -20,12 +21,12 @@ export function buildStockRegister(summary: MonthSummary, settings: Settings): S
     name: `Stock_Consumption_${periodSlug(summary)}`,
     fileName: `4_AWC_${c.number}_Stock_Consumption_Register_${periodSlug(summary)}`,
     title: REPORT_TITLES.stock,
-    colWidths: [12, 12, ...Array(30).fill(11)],
+    colWidths: [12, 12, ...Array(33).fill(11)],
     landscape: true,
   });
 
   b.mergeSet(
-    'A1:AF1',
+    `A1:${LAST_COL}1`,
     `অংশ ২: পরিপূরক আহারের খাদ্য সামগ্রীর দৈনিক খরচ ও মজুতের বিবরণ (${periodLabel(summary)}) - কেন্দ্র নং: ${c.number} (Code: ${c.code})`,
     S.title,
   ).height(1, 28);
@@ -63,7 +64,7 @@ export function buildStockRegister(summary: MonthSummary, settings: Settings): S
   b.height(4, 36);
 
   const first = 5;
-  const lastBalance: Record<StockItemKey, string> = { rice: '', dal: '', oil: '', salt: '' };
+  const lastBalance: Record<StockItemKey, string> = { rice: '', dal: '', oil: '', salt: '', turmeric: '' };
   summary.rows.forEach((row, i) => {
     const r = first + i;
     b.height(r, 18);
@@ -144,7 +145,7 @@ export function buildStockRegister(summary: MonthSummary, settings: Settings): S
     `মোট রান্নার দিন: ${summary.servedDays} দিন | মা: খিচুড়ি ${m.khichuri.mother}, ভাত ${m.rice.mother} (মোট ${motherTotal}) | শিশু: খিচুড়ি ${m.khichuri.child}, ভাত ${m.rice.child} (মোট ${childTotal})`,
     S.footer,
   );
-  b.mergeSet(`R${t + 2}:AF${t + 2}`, `${receiptSummary(summary)} | কর্মী: ${c.workerName}`, S.footer).height(t + 2, 34);
+  b.mergeSet(`R${t + 2}:${LAST_COL}${t + 2}`, `${receiptSummary(summary)} | কর্মী: ${c.workerName}`, S.footer).height(t + 2, 34);
   return b.build();
 }
 

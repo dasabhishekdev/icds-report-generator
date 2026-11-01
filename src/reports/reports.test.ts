@@ -69,6 +69,21 @@ describe('September 2026 reports', () => {
     expect(v(stock, 'T35')).toBeNull();
   });
 
+  it('stock register carries government-supplied turmeric', () => {
+    expect(v(stock, 'AG3')).toBe('খাদ্য সামগ্রী-৭: হলুদ (Turmeric) [OB: 1000 গ্রাম (g)]');
+    expect(v(stock, 'AH5')).toBe(20);
+    expect(v(stock, 'AI34')).toBe(455.5);
+    expect(v(stock, 'AH35')).toBe(544.5);
+  });
+
+  it('fuel register shows government supplies without a rate or amount', () => {
+    for (const r of [43, 44, 45]) {
+      expect(v(fuel, `D${r}`)).toBe('সরকারি সরবরাহ');
+      expect(v(fuel, `E${r}`)).toBeNull();
+    }
+    expect(v(fuel, 'A43')).toContain('CSB / Rice / Dal');
+  });
+
   it('stock register use and balance are quantities in grams, not money', () => {
     expect(v(stock, 'V4')).toBe('খরচ (চাল)\nগ্রাম (g)');
     expect(v(stock, 'W4')).toBe('মজুত (চাল)\nগ্রাম (g)');

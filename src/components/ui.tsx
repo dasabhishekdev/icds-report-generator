@@ -76,7 +76,7 @@ export function Field({ label, hint, children }: { label: ReactNode; hint?: Reac
 }
 
 const inputClass =
-  'w-full rounded-xl border-0 bg-white px-3 py-2.5 text-base text-slate-900 ring-1 ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-teal-600 focus:outline-none';
+  'w-full rounded-xl border-0 bg-white px-3 py-2.5 text-base text-slate-900 ring-1 ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-teal-600 focus:outline-none disabled:bg-slate-100 disabled:text-slate-400';
 
 export function TextInput(props: InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={`${inputClass} ${props.className ?? ''}`} />;
@@ -89,12 +89,14 @@ export function NumberInput({
   placeholder,
   className = '',
   step = 'any',
+  disabled = false,
 }: {
   value: number | undefined;
   onChange: (v: number | undefined) => void;
   placeholder?: string;
   className?: string;
   step?: string;
+  disabled?: boolean;
 }) {
   const [text, setText] = useState(value === undefined ? '' : String(value));
   useEffect(() => {
@@ -108,6 +110,7 @@ export function NumberInput({
       step={step}
       value={text}
       placeholder={placeholder}
+      disabled={disabled}
       onChange={(e) => {
         setText(e.target.value);
         const v = e.target.value === '' ? undefined : Number(e.target.value);

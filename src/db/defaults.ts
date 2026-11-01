@@ -1,20 +1,23 @@
 import type { Category, CenterInfo, ItemQuantities, Norms, Settings } from './schema';
 
-const zero: ItemQuantities = { rice: 0, dal: 0, oil: 0, salt: 0, egg: 0, veg: 0, potato: 0, chatu: 0 };
+const zero: ItemQuantities = { rice: 0, dal: 0, oil: 0, salt: 0, turmeric: 0, egg: 0, veg: 0, potato: 0, chatu: 0 };
 
 export function emptyNorms(): Norms {
   return { khichuri: { ...zero }, rice: { ...zero } };
 }
 
+/** Grams of government-supplied turmeric per head on every meal day. */
+export const TURMERIC_PER_HEAD = 0.5;
+
 /** Per-head norms reverse-engineered from the September 2026 registers of AWC 547. */
 const motherNorms: Norms = {
-  khichuri: { rice: 75, dal: 30, oil: 2, salt: 2, egg: 1, veg: 11.5, potato: 50, chatu: 0 },
-  rice: { rice: 110, dal: 0, oil: 2, salt: 2, egg: 1, veg: 0, potato: 30, chatu: 0 },
+  khichuri: { rice: 75, dal: 30, oil: 2, salt: 2, turmeric: TURMERIC_PER_HEAD, egg: 1, veg: 11.5, potato: 50, chatu: 0 },
+  rice: { rice: 110, dal: 0, oil: 2, salt: 2, turmeric: TURMERIC_PER_HEAD, egg: 1, veg: 0, potato: 30, chatu: 0 },
 };
 
 const childNorms: Norms = {
-  khichuri: { rice: 75, dal: 30, oil: 2, salt: 2, egg: 0.5, veg: 20.5, potato: 60, chatu: 0 },
-  rice: { rice: 50, dal: 0, oil: 2, salt: 2, egg: 1, veg: 0, potato: 0, chatu: 10 },
+  khichuri: { rice: 75, dal: 30, oil: 2, salt: 2, turmeric: TURMERIC_PER_HEAD, egg: 0.5, veg: 20.5, potato: 60, chatu: 0 },
+  rice: { rice: 50, dal: 0, oil: 2, salt: 2, turmeric: TURMERIC_PER_HEAD, egg: 1, veg: 0, potato: 0, chatu: 10 },
 };
 
 const cloneNorms = (n: Norms): Norms => ({ khichuri: { ...n.khichuri }, rice: { ...n.rice } });
@@ -68,9 +71,9 @@ export function defaultSettings(center: Partial<CenterInfo> = {}): Settings {
     fuelItems: [
       { id: 'fuel', name: 'কয়লা/কাঠ/কেরোসিন তেল (Coal/Wood/Kerosene)', unit: 'Kg', rate: 0, qtyPerBeneficiaryDay: 0 },
       { id: 'matchbox', name: 'ঘুঁটে / দেশলাই (Cowdung cake / Matchbox)', unit: 'Pcs', rate: 0, qtyPerBeneficiaryDay: 0 },
-      { id: 'csb', name: 'সি.এস.বি. / চাল / ডাল (CSB / Rice / Dal)', unit: 'Kg', rate: 0, qtyPerBeneficiaryDay: 0 },
-      { id: 'oil', name: 'স্যাঃ তেল / সঃ তেল (Oil)', unit: 'Lit', rate: 0, qtyPerBeneficiaryDay: 0 },
-      { id: 'spices', name: 'হলুদ / লবণ (Turmeric / Salt)', unit: 'Kg', rate: 0, qtyPerBeneficiaryDay: 0 },
+      { id: 'csb', name: 'সি.এস.বি. / চাল / ডাল (CSB / Rice / Dal)', unit: 'Kg', rate: 0, qtyPerBeneficiaryDay: 0, govSupplied: true },
+      { id: 'oil', name: 'স্যাঃ তেল / সঃ তেল (Oil)', unit: 'Lit', rate: 0, qtyPerBeneficiaryDay: 0, govSupplied: true },
+      { id: 'spices', name: 'হলুদ / লবণ (Turmeric / Salt)', unit: 'Kg', rate: 0, qtyPerBeneficiaryDay: 0, govSupplied: true },
     ],
     fuelPerCookingDay: 43.95,
     holidays: [],

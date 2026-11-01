@@ -116,7 +116,7 @@ export function sampleData(): AppData {
     { id: 'demo-r-3', date: '2026-09-16', item: 'salt', quantity: 3000, challanNo: '1429' },
   ];
 
-  const monthMetas: MonthMeta[] = [{ month: '2026-09', openingStock: { rice: 339030, dal: 12780, oil: 4894, salt: 5254 } }];
+  const monthMetas: MonthMeta[] = [{ month: '2026-09', openingStock: { rice: 339030, dal: 12780, oil: 4894, salt: 5254, turmeric: 1000 } }];
 
   return { settings, categories: defaultCategories(), beneficiaries, days, receipts, monthMetas };
 }

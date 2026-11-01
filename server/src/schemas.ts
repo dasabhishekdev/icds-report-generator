@@ -35,6 +35,8 @@ const items = z.strictObject({
   dal: amount,
   oil: amount,
   salt: amount,
+  /** Absent in categories saved before turmeric was tracked. */
+  turmeric: amount.default(0),
   egg: amount,
   veg: amount,
   potato: amount,
@@ -98,12 +100,12 @@ const receiptFields = {
 
 export const receiptSchema = z.strictObject({
   ...receiptFields,
-  item: z.enum(['rice', 'dal', 'oil', 'salt']),
+  item: z.enum(['rice', 'dal', 'oil', 'salt', 'turmeric']),
 }) satisfies z.ZodType<StockReceipt>;
 
 /** Chatu is bought, not received: chatu receipts in older backups are accepted and dropped. */
 const backupReceiptsSchema = z
-  .array(z.strictObject({ ...receiptFields, item: z.enum(['chatu', 'rice', 'dal', 'oil', 'salt']) }))
+  .array(z.strictObject({ ...receiptFields, item: z.enum(['chatu', 'rice', 'dal', 'oil', 'salt', 'turmeric']) }))
   .max(10_000)
   .transform((list) => list.filter((r): r is StockReceipt => isStockItem(r.item)));
 
@@ -115,6 +117,7 @@ export const monthMetaSchema = z.strictObject({
       dal: amount.optional(),
       oil: amount.optional(),
       salt: amount.optional(),
+      turmeric: amount.optional(),
       /** Accepted from older clients and backups, then dropped. */
       chatu: amount.optional(),
     })
@@ -152,6 +155,7 @@ const settingsFields = {
         unit: text(20),
         rate: amount,
         qtyPerBeneficiaryDay: amount,
+        govSupplied: z.boolean().optional(),
       }),
     )
     .max(50),

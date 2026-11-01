@@ -40,7 +40,8 @@ describe('September 2026 sample (AWC 547)', () => {
     expect(summary.rows[0].consumption).toMatchObject({ rice: 3000, dal: 1200, oil: 80, salt: 80 });
     expect(summary.rows[1].consumption).toMatchObject({ rice: 2180, dal: 0 });
     expect(summary.rows[15].closing.dal).toBe(34410);
-    expect(summary.closing).toEqual({ rice: 267310, dal: 25800, oil: 5716, salt: 6076 });
+    expect(summary.closing).toEqual({ rice: 267310, dal: 25800, oil: 5716, salt: 6076, turmeric: 455.5 });
+    expect(summary.rows[0].consumption.turmeric).toBe(20);
   });
 
   it('keeps chatu out of the stock ledger because it is bought', () => {

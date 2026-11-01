@@ -98,7 +98,7 @@ export function buildFuelSpices(summary: MonthSummary, settings: Settings): Shee
     const { rupees, paise } = splitRupees(line.amount);
     b.mergeSet(`A${r}:B${r}`, line.name, S.text)
       .set(`C${r}`, line.quantity ? `${line.quantity} ${line.unit}` : null, S.cell)
-      .set(`D${r}`, blankZero(line.rate), S.money)
+      .set(`D${r}`, line.govSupplied ? 'সরকারি সরবরাহ' : blankZero(line.rate), line.govSupplied ? S.cell : S.money)
       .set(`E${r}`, line.amount ? rupees : null, S.cell)
       .set(`F${r}`, line.amount ? paise : null, S.cell)
       .height(r, 30);

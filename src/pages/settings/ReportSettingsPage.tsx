@@ -451,11 +451,23 @@ function FuelItemsCard({ onSaved }: { onSaved: (ok: boolean) => void }) {
                 <TextInput value={item.unit} onChange={(e) => update(item.id, { unit: e.target.value })} />
               </Field>
               <Field label={t('rate')}>
-                <NumberInput value={item.rate} onChange={(v) => update(item.id, { rate: v ?? 0 })} />
+                <NumberInput
+                  value={item.govSupplied ? undefined : item.rate}
+                  placeholder={item.govSupplied ? t('govSuppliedShort') : undefined}
+                  disabled={item.govSupplied}
+                  onChange={(v) => update(item.id, { rate: v ?? 0 })}
+                />
               </Field>
               <Field label={t('perBenDay')}>
                 <NumberInput value={item.qtyPerBeneficiaryDay} onChange={(v) => update(item.id, { qtyPerBeneficiaryDay: v ?? 0 })} />
               </Field>
+            </div>
+            <div className="mt-2">
+              <Toggle
+                checked={item.govSupplied === true}
+                onChange={(govSupplied) => update(item.id, govSupplied ? { govSupplied, rate: 0 } : { govSupplied })}
+                label={t('govSupplied')}
+              />
             </div>
           </div>
         ))}

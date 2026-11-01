@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { FastifyInstance, LightMyRequestResponse } from 'fastify';
 import { MongoClient, ObjectId } from 'mongodb';
-import { defaultSettings } from '../../src/db/defaults';
+import { defaultCategories, defaultSettings } from '../../src/db/defaults';
 import { sampleData } from '../../src/db/sampleData';
 import type { BackupFile } from '../../src/db/schema';
 import { buildApp } from '../src/app';
@@ -208,6 +208,31 @@ describe.skipIf(!MONGO_URL)('API', () => {
     await backfillDefaultSettings(c);
     expect((await c.settings.findOne({ userId: older }))?.fuelPerCookingDay).toBe(43.95);
     expect((await c.settings.findOne({ userId: changed }))?.fuelPerCookingDay).toBe(50);
+  });
+
+  it('backfills turmeric norms and marks government fuel rows without a rate', async () => {
+    const c = collections(client.db(dbName));
+    const userId = new ObjectId();
+    const { id: _id, ...settings } = defaultSettings();
+    const legacyItems = settings.fuelItems.map(({ govSupplied: _gov, ...item }) => ({ ...item, rate: item.id === 'oil' ? 120 : 5 }));
+    await c.settings.insertOne({ ...settings, fuelItems: legacyItems, userId });
+    const legacy = defaultCategories().map((cat) => {
+      const { turmeric: _k, ...khichuri } = cat.norms.khichuri;
+      const { turmeric: _r, ...rice } = cat.norms.rice;
+      return { ...cat, norms: { khichuri: cat.id === 'pregnant' ? { ...khichuri, turmeric: 2 } : khichuri, rice }, userId };
+    });
+    await c.categories.insertMany(legacy as never);
+    await backfillDefaultSettings(c);
+    const after = await c.categories.find({ userId }).sort({ sortOrder: 1 }).toArray();
+    expect(after.map((cat) => [cat.norms.khichuri.turmeric, cat.norms.rice.turmeric])).toEqual([[2, 0.5], [0.5, 0.5], [0, 0], [0.5, 0.5], [0.5, 0.5]]);
+    const items = (await c.settings.findOne({ userId }))!.fuelItems;
+    expect(items.map((i) => [i.id, i.govSupplied ?? false, i.rate])).toEqual([
+      ['fuel', false, 5],
+      ['matchbox', false, 5],
+      ['csb', true, 0],
+      ['oil', true, 0],
+      ['spices', true, 0],
+    ]);
   });
 
   it('imports a backup, protects referenced beneficiaries and resets to defaults', async () => {

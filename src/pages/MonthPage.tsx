@@ -295,7 +295,7 @@ function FuelPanel({ summary }: { summary: MonthSummary }) {
     const o = draft.find((x) => x.fuelItemId === item.id);
     const a = auto(item.id);
     const quantity = o?.quantity ?? a.quantity;
-    const rate = o?.rate ?? a.rate;
+    const rate = item.govSupplied ? 0 : (o?.rate ?? a.rate);
     return { ...item, quantity, rate, amount: round2(quantity * rate), overridden: Boolean(o) };
   });
   const daily = summary.fuelDaily;
@@ -342,9 +342,14 @@ function FuelPanel({ summary }: { summary: MonthSummary }) {
                   <NumberInput value={line.quantity} onChange={(v) => setLine(line.id, { quantity: v ?? 0 })} />
                 </Field>
                 <Field label={t('rate')}>
-                  <NumberInput value={line.rate} onChange={(v) => setLine(line.id, { rate: v ?? 0 })} />
+                  <NumberInput
+                    value={line.govSupplied ? undefined : line.rate}
+                    placeholder={line.govSupplied ? t('govSuppliedShort') : undefined}
+                    disabled={line.govSupplied}
+                    onChange={(v) => setLine(line.id, { rate: v ?? 0 })}
+                  />
                 </Field>
-                <MiniStat label={t('amount')} value={rupees(line.amount)} />
+                <MiniStat label={t('amount')} value={line.govSupplied ? t('govSuppliedShort') : rupees(line.amount)} />
               </div>
             </div>
           ))}
