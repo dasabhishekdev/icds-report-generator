@@ -42,21 +42,17 @@ describe('September 2026 reports', () => {
     expect(v(voucher, 'F13')).toBe(222.16);
   });
 
-  it('SNP register totals and footer', () => {
+  it('SNP register writes money as taka and paisa, like the printed form', () => {
     expect(v(snp, 'B5')).toBe('খিচুড়ি (Kh)');
-    expect(v(snp, 'K5')).toBe(182.75);
-    expect(v(snp, 'O35')).toBe(9072.64);
+    expect(v(snp, 'K4')).toBe('ডিম: মা ও শিশুর\n(Col 8 - টাকা-পয়সা)');
+    expect(v(snp, 'K5')).toBe('182 টাকা 75 পয়সা');
+    expect(v(snp, 'K35')).toBe('7,084 টাকা 75 পয়সা');
+    expect(snp.cells.get('O35')).toMatchObject({ value: '9,072 টাকা 64 পয়সা', formula: undefined });
     expect(v(snp, 'A37')).toContain('মোট 9,072 টাকা 64 পয়সা (Rupees 9,073.00');
   });
 
-  it('SNP register can show money in paise like the printed form', () => {
-    const settings = { ...data.settings, snpInPaise: true };
-    const paise = buildAllReports(buildMonthSummary('2026-09', data), settings)[2];
-    expect(paise.cells.get('K5')).toMatchObject({ value: 18275, style: { numFmt: '0' } });
-    expect(v(paise, 'K35')).toBe(708475);
-    expect(paise.cells.get('O35')).toMatchObject({ value: 907264, formula: 'SUM(O5:O34)' });
-    expect(v(paise, 'K4')).toBe('ডিম: মা ও শিশুর\n(Col 8 - পঃ)');
-    expect(v(paise, 'A37')).toContain('মোট 9,072 টাকা 64 পয়সা');
+  it('SNP register leaves money blank when nothing was spent', () => {
+    expect(v(snp, 'H5')).toBeNull();
   });
 
   it('stock register carries balances with formulas', () => {

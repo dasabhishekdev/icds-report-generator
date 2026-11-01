@@ -162,7 +162,7 @@ export interface Settings {
   openOnStateHolidays?: string[];
   /** Paper for PDF, print and Excel page setup. Absent in databases created before it existed. */
   paperSize?: PaperSize;
-  /** SNP register money as whole paise (18275 for Rs 182.75), as on the printed form. */
+  /** Legacy, ignored: the SNP register always writes money as taka and paisa. */
   snpInPaise?: boolean;
 }
 

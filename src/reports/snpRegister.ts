@@ -1,7 +1,7 @@
 import type { Settings } from '../db/schema';
 import type { MonthSummary } from '../domain/month';
 import { dayLabel, holidayText, inr, mealLabel, periodCaption, periodLabel, periodSlug, takaPaisa } from './common';
-import { blankZero, S, SheetBuilder, zebra, type CellStyle, type SheetModel } from './sheet';
+import { S, SheetBuilder, zebra, type SheetModel } from './sheet';
 import { REPORT_TITLES } from './titles';
 
 export function buildSnpRegister(summary: MonthSummary, settings: Settings): SheetModel {
@@ -11,7 +11,7 @@ export function buildSnpRegister(summary: MonthSummary, settings: Settings): She
     name: `SNP_Veg_Egg_${periodSlug(summary)}`,
     fileName: `3_AWC_${c.number}_SNP_Veg_Egg_Register_${periodSlug(summary)}`,
     title: REPORT_TITLES.snp,
-    colWidths: [10, 14, 12, 12, 12, 14, 14, 14, 12, 14, 16, 14, 14, 18, 16],
+    colWidths: [10, 14, 11, 11, 11, 17, 17, 17, 11, 13, 19, 17, 17, 14, 20],
     landscape: true,
   });
 
@@ -26,10 +26,9 @@ export function buildSnpRegister(summary: MonthSummary, settings: Settings): She
     S.infoCenter,
   ).height(2, 22);
 
-  const inPaise = settings.snpInPaise === true;
-  const cash = (rs: number) => (inPaise ? Math.round(rs * 100) : rs);
-  const cashStyle = (style: CellStyle): CellStyle => (inPaise ? { ...style, numFmt: '0' } : style);
-  const unit = inPaise ? 'পঃ' : 'টাকা';
+  /** Money is written out as on the printed form, e.g. "182 টাকা 75 পয়সা"; blank when nothing was spent. */
+  const cash = (rs: number) => (rs ? takaPaisa(rs) : null);
+  const unit = 'টাকা-পয়সা';
 
   const headers = [
     'তারিখ\n(Date)', 'খাবার\n(Meal)', 'মা: গর্ভবতী\n(Col 1)', 'মা: প্রসূতি\n(Col 2)', 'মোট মা\n(Col 3)',
@@ -50,8 +49,8 @@ export function buildSnpRegister(summary: MonthSummary, settings: Settings): She
     }
     const cell = zebra(S.cell, i);
     const bold = zebra(S.cellBold, i);
-    const money = cashStyle(zebra(S.money, i));
-    const moneyBold = cashStyle(zebra(S.moneyBold, i));
+    const money = zebra(S.money, i);
+    const moneyBold = zebra(S.moneyBold, i);
     b.set(`A${r}`, dayLabel(row, summary), cell);
     if (!row.served) {
       for (const col of 'BCDEFGHIJKLMNO') b.set(`${col}${r}`, null, cell);
@@ -63,16 +62,16 @@ export function buildSnpRegister(summary: MonthSummary, settings: Settings): She
       .set(`C${r}`, k.pregnant, cell)
       .set(`D${r}`, k.nursing, cell)
       .set(`E${r}`, k.mothers, bold, `C${r}+D${r}`)
-      .set(`F${r}`, blankZero(cash(x.motherVeg)), money)
-      .set(`G${r}`, blankZero(cash(x.motherPotato)), money)
-      .set(`H${r}`, blankZero(cash(x.chatu)), money)
+      .set(`F${r}`, cash(x.motherVeg), money)
+      .set(`G${r}`, cash(x.motherPotato), money)
+      .set(`H${r}`, cash(x.chatu), money)
       .set(`I${r}`, k.children, cell)
       .set(`J${r}`, k.total, bold, `E${r}+I${r}`)
-      .set(`K${r}`, blankZero(cash(x.egg)), money)
-      .set(`L${r}`, blankZero(cash(x.childVeg)), money)
-      .set(`M${r}`, blankZero(cash(x.childPotato)), money)
+      .set(`K${r}`, cash(x.egg), money)
+      .set(`L${r}`, cash(x.childVeg), money)
+      .set(`M${r}`, cash(x.childPotato), money)
       .set(`N${r}`, null, cell)
-      .set(`O${r}`, cash(x.total), moneyBold, `SUM(F${r}:H${r})+SUM(K${r}:M${r})`);
+      .set(`O${r}`, cash(x.total), moneyBold);
   });
 
   const last = first + summary.rows.length - 1;
@@ -80,22 +79,22 @@ export function buildSnpRegister(summary: MonthSummary, settings: Settings): She
   const tc = summary.totals.counts;
   const tx = summary.totals.costs;
   const sum = (col: string) => `SUM(${col}${first}:${col}${last})`;
-  const totalMoney = cashStyle(S.totalMoney);
+  const totalMoney = S.totalMoney;
   b.set(`A${t}`, 'সর্বমোট', S.total)
     .set(`B${t}`, `${summary.servedDays} দিন`, S.total)
     .set(`C${t}`, tc.pregnant, S.total, sum('C'))
     .set(`D${t}`, tc.nursing, S.total, sum('D'))
     .set(`E${t}`, tc.mothers, S.total, sum('E'))
-    .set(`F${t}`, cash(tx.motherVeg), totalMoney, sum('F'))
-    .set(`G${t}`, cash(tx.motherPotato), totalMoney, sum('G'))
-    .set(`H${t}`, cash(tx.chatu), totalMoney, sum('H'))
+    .set(`F${t}`, cash(tx.motherVeg), totalMoney)
+    .set(`G${t}`, cash(tx.motherPotato), totalMoney)
+    .set(`H${t}`, cash(tx.chatu), totalMoney)
     .set(`I${t}`, tc.children, S.total, sum('I'))
     .set(`J${t}`, tc.total, S.total, sum('J'))
-    .set(`K${t}`, cash(tx.egg), totalMoney, sum('K'))
-    .set(`L${t}`, cash(tx.childVeg), totalMoney, sum('L'))
-    .set(`M${t}`, cash(tx.childPotato), totalMoney, sum('M'))
+    .set(`K${t}`, cash(tx.egg), totalMoney)
+    .set(`L${t}`, cash(tx.childVeg), totalMoney)
+    .set(`M${t}`, cash(tx.childPotato), totalMoney)
     .set(`N${t}`, null, S.total)
-    .set(`O${t}`, cash(tx.total), totalMoney, sum('O'))
+    .set(`O${t}`, cash(tx.total), totalMoney)
     .height(t, 24);
 
   b.mergeSet(

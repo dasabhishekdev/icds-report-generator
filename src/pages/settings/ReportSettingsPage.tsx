@@ -21,7 +21,7 @@ import { stateHolidayMode, type HolidaySource } from '../../domain/holidays';
 import type { StringKey } from '../../i18n/strings';
 import { ITEM_LABEL, MEAL_LABEL, formatQty, rupees } from '../../lib/format';
 import { useApp } from '../../state/AppDataContext';
-import { Button, Card, Field, Flash, Modal, NumberInput, Segmented, TextInput, Toggle, useFlash } from '../../components/ui';
+import { Button, Card, Field, Flash, Modal, NumberInput, Segmented, TextInput, useFlash } from '../../components/ui';
 import { CategoryEditor } from '../CategoryEditor';
 import { SettingsHeader } from './SettingsHeader';
 
@@ -45,7 +45,6 @@ export function ReportSettingsPage() {
       <CategoriesCard />
       <NursingPeriodCard key={nursingMonths} onSaved={saved} />
       <HolidaysCard key={weeklyOffDays.join()} onSaved={saved} />
-      <SnpMoneyCard />
       <DefaultsCard onDone={() => setFlash(t('done'))} />
       <Flash message={flash} />
     </div>
@@ -450,11 +449,3 @@ function StateCalendarSection() {
   );
 }
 
-function SnpMoneyCard() {
-  const { t, data } = useApp();
-  return (
-    <Card title={t('snpMoneyTitle')}>
-      <Toggle checked={data.settings.snpInPaise === true} onChange={(snpInPaise) => void saveSettings({ snpInPaise })} label={t('snpInPaise')} />
-    </Card>
-  );
-}

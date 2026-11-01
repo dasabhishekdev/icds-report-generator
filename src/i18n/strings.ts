@@ -275,8 +275,6 @@ const strings = {
     en: 'Printed on every cooking-day row of the fuel bill; the month total is this × cooking days. Leave 0 if not used.',
   },
   fuelDailyLine: { bn: 'প্রতি রান্নার দিন', en: 'Per cooking day' },
-  snpMoneyTitle: { bn: 'S.N.P. রেজিস্টারে টাকার হিসাব', en: 'Money on the SNP register' },
-  snpInPaise: { bn: 'পয়সায় লিখুন (যেমন ১৮২.৭৫ টাকা = ১৮২৭৫)', en: 'Write in paise (Rs 182.75 = 18275)' },
   language: { bn: 'ভাষা', en: 'Language' },
   nursingMonths: { bn: 'প্রসূতি থাকার সময় (মাস)', en: 'Nursing period (months)' },
   nursingHint: {
