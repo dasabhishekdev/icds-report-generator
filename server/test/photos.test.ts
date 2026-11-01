@@ -85,6 +85,16 @@ describe.skipIf(!MONGO_URL)('Jan Andolan photos', () => {
     expect(res.json().name).toBe('AWC_12_JanAndolan_2026-11-01_0030.png');
   });
 
+  it('saves the GPS location stamped on a photo', async () => {
+    const cookie = await t.register(`geo-${Math.random()}@test.in`, '547');
+    const location = { lat: 22.97321, lng: 88.43211, accuracy: 12 };
+    const res = await t.call(cookie, 'POST', '/api/photos', upload(bytes(JPEG, 5_000), { location }));
+    expect(res.statusCode).toBe(201);
+    expect(res.json().location).toEqual(location);
+    expect((await t.call(cookie, 'GET', '/api/photos')).json()[0].location).toEqual(location);
+    expect((await t.call(cookie, 'POST', '/api/photos', upload(bytes(JPEG, 5_000), { location: { lat: 99, lng: 88, accuracy: 5 } }))).statusCode).toBe(400);
+  });
+
   it('rejects oversized, mislabelled and malformed uploads', async () => {
     const cookie = await t.register(`bad-${Math.random()}@test.in`);
     const post = (body: unknown) => t.call(cookie, 'POST', '/api/photos', body).then((r) => r.statusCode);

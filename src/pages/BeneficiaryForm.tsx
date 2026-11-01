@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { TriangleAlert } from 'lucide-react';
+import { Archive, ArchiveRestore, TriangleAlert } from 'lucide-react';
 import { dataApi, newId } from '../api/data';
-import type { Beneficiary, ChildBeneficiary, Gender, MotherBeneficiary } from '../db/schema';
+import { EXIT_REASONS, type Beneficiary, type ChildBeneficiary, type ExitReason, type Gender, type MotherBeneficiary } from '../db/schema';
 import { addMonths, currentMonth, monthLabel, monthName, shiftMonth, todayIso } from '../domain/dates';
 import { nextChildShift, resolveCategory } from '../domain/eligibility';
 import {
@@ -34,9 +34,8 @@ type Draft = {
   pregnancyMonths: string;
   babyMonths: string;
   joinedMonth: string;
-  lastMonth: string;
   /** Fields the user changed; untouched ones keep the record's exact dates. */
-  touched: { age: boolean; mother: boolean; joined: boolean; left: boolean };
+  touched: { age: boolean; mother: boolean; joined: boolean };
 };
 
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -75,8 +74,7 @@ function toDraft(b: Beneficiary | undefined, kind: 'child' | 'mother'): Draft {
     ...deriveAge(b, month),
     ...deriveMother(b, month),
     joinedMonth: b ? b.enrolledOn.slice(0, 7) : month,
-    lastMonth: b?.exitedOn ? lastMonthBeforeExit(b.exitedOn) : '',
-    touched: { age: false, mother: false, joined: false, left: false },
+    touched: { age: false, mother: false, joined: false },
   };
 }
 
@@ -84,28 +82,23 @@ const opt = (s: string) => (s.trim() ? s.trim() : undefined);
 const range = (from: number, to: number) => Array.from({ length: Math.max(0, to - from + 1) }, (_, i) => from + i);
 
 /** Month and year dropdowns (no native month input: iOS anchors it off-screen). */
-function MonthSelect({ value, onChange, emptyLabel }: { value: string; onChange: (m: string) => void; emptyLabel?: string }) {
+function MonthSelect({ value, onChange }: { value: string; onChange: (m: string) => void }) {
   const { lang } = useApp();
   const thisYear = Number(currentMonth().slice(0, 4));
-  const year = value ? Number(value.slice(0, 4)) : thisYear;
+  const year = Number(value.slice(0, 4));
   const years = range(Math.min(year, thisYear - 7), Math.max(year, thisYear + 1));
   return (
     <div className="grid grid-cols-[3fr_2fr] gap-2">
       <Select
-        value={value ? value.slice(5, 7) : ''}
-        onChange={(m) => onChange(m ? `${year}-${m}` : '')}
-        options={[
-          ...(emptyLabel ? [{ value: '', label: emptyLabel }] : []),
-          ...range(1, 12).map((m) => ({ value: pad(m), label: monthName(m, lang) })),
-        ]}
+        value={value.slice(5, 7)}
+        onChange={(m) => onChange(`${year}-${m}`)}
+        options={range(1, 12).map((m) => ({ value: pad(m), label: monthName(m, lang) }))}
       />
-      {value && (
-        <Select
-          value={String(year)}
-          onChange={(y) => onChange(`${y}-${value.slice(5, 7)}`)}
-          options={years.map((y) => ({ value: String(y), label: String(y) }))}
-        />
-      )}
+      <Select
+        value={String(year)}
+        onChange={(y) => onChange(`${y}-${value.slice(5, 7)}`)}
+        options={years.map((y) => ({ value: String(y), label: String(y) }))}
+      />
     </div>
   );
 }
@@ -157,6 +150,71 @@ function MotherStagePreview({ mother }: { mother: MotherBeneficiary }) {
   );
 }
 
+/** Archive someone who left (e.g. migrated): they stay in past months and leave the list from the next month. */
+function ArchivePanel({
+  existing,
+  defaultMonth,
+  onArchive,
+  onRestore,
+}: {
+  existing: Beneficiary;
+  defaultMonth: string;
+  onArchive: (lastMonth: string, reason: ExitReason) => void;
+  onRestore: () => void;
+}) {
+  const { t, lang } = useApp();
+  const [open, setOpen] = useState(false);
+  const [lastMonth, setLastMonth] = useState(defaultMonth);
+  const [reason, setReason] = useState<ExitReason>('migrated');
+  const reasonLabel = (r: ExitReason | undefined) => (r === 'migrated' ? t('reasonMigrated') : r === 'other' ? t('reasonOther') : '');
+
+  if (existing.exitedOn) {
+    const archived = todayIso() >= existing.exitedOn;
+    const month = monthLabel(lastMonthBeforeExit(existing.exitedOn), lang);
+    return (
+      <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-slate-100 px-3 py-3 ring-1 ring-slate-200">
+        <Archive size={20} className="shrink-0 text-slate-500" />
+        <span className="min-w-0 flex-1 text-sm text-slate-700">
+          <b>{archived ? t('archived') : t('leaving')}</b>
+          {existing.exitReason && ` · ${reasonLabel(existing.exitReason)}`}
+          <span className="block text-xs text-slate-500">
+            {t('lastMonthAtCentre')}: {month}
+          </span>
+        </span>
+        <Button onClick={onRestore}>
+          <ArchiveRestore size={18} /> {t('restore')}
+        </Button>
+      </div>
+    );
+  }
+  if (!open) {
+    return (
+      <Button className="w-full" onClick={() => setOpen(true)}>
+        <Archive size={18} /> {t('archiveAction')}
+      </Button>
+    );
+  }
+  return (
+    <div className="space-y-3 rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-200">
+      <div className="text-sm font-bold text-slate-800">{t('archiveAction')}</div>
+      <Segmented
+        value={reason}
+        onChange={setReason}
+        options={EXIT_REASONS.map((r) => ({ value: r, label: reasonLabel(r) }))}
+      />
+      <Field label={t('lastMonthAtCentre')} hint={t('archiveHint')}>
+        <MonthSelect value={lastMonth} onChange={setLastMonth} />
+      </Field>
+      <div className="flex gap-2">
+        <Button variant="danger" className="flex-1" onClick={() => onArchive(lastMonth, reason)}>
+          <Archive size={18} /> {t('archiveConfirm')}
+        </Button>
+        <Button onClick={() => setOpen(false)}>{t('cancel')}</Button>
+      </div>
+    </div>
+  );
+}
+
 export function BeneficiaryForm({
   existing,
   initialKind,
@@ -197,7 +255,8 @@ export function BeneficiaryForm({
       id,
       name: d.name.trim(),
       enrolledOn: existing && !d.touched.joined ? existing.enrolledOn : `${d.joinedMonth}-01`,
-      exitedOn: existing && !d.touched.left ? existing.exitedOn : d.lastMonth ? exitAfterMonth(d.lastMonth) : undefined,
+      exitedOn: existing?.exitedOn,
+      exitReason: existing?.exitReason,
       notes: opt(d.notes),
     };
     if (d.kind === 'child') {
@@ -223,8 +282,8 @@ export function BeneficiaryForm({
     return { ...base, kind: 'mother', husbandName: opt(d.husbandName), ...dates };
   }
 
-  async function save() {
-    if (await dataApi.saveBeneficiary(build())) onDone();
+  async function save(exit?: Pick<Beneficiary, 'exitedOn' | 'exitReason'>) {
+    if (await dataApi.saveBeneficiary({ ...build(), ...exit })) onDone();
   }
 
   async function remove() {
@@ -349,10 +408,15 @@ export function BeneficiaryForm({
           <MonthSelect value={d.joinedMonth} onChange={(v) => edit('joinedMonth', v, 'joined')} />
           {d.joinedMonth > d.registerMonth && <p className="mt-1 text-xs font-medium text-amber-700">⚠ {t('joinedAfterRegister')}</p>}
         </Field>
-        <Field label={t('exitedOn')} hint={t('exitHint')}>
-          <MonthSelect value={d.lastMonth} onChange={(v) => edit('lastMonth', v, 'left')} emptyLabel={t('stillAtCentre')} />
-        </Field>
       </div>
+      {existing && (
+        <ArchivePanel
+          existing={existing}
+          defaultMonth={d.registerMonth}
+          onArchive={(lastMonth, exitReason) => void save({ exitedOn: exitAfterMonth(lastMonth), exitReason })}
+          onRestore={() => void save({ exitedOn: undefined, exitReason: undefined })}
+        />
+      )}
       <Field label={t('notes')}>
         <TextInput value={d.notes} onChange={(e) => set('notes', e.target.value)} />
       </Field>

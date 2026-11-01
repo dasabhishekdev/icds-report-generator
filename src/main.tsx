@@ -6,6 +6,9 @@ import '@fontsource/noto-sans-bengali/600.css';
 import '@fontsource/noto-sans-bengali/700.css';
 import './index.css';
 import { App } from './App';
+import { rememberApkVersion } from './lib/androidApp';
+
+rememberApkVersion();
 
 // An installed phone app stays alive in the background for days, so the browser's own update
 // check rarely runs. Check whenever the app comes back to the screen; a new version then

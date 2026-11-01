@@ -42,12 +42,17 @@ export interface Category {
   norms: Norms;
 }
 
+export type ExitReason = 'migrated' | 'other';
+export const EXIT_REASONS: readonly ExitReason[] = ['migrated', 'other'];
+
 interface BeneficiaryBase {
   id: string;
   name: string;
   /** Registration date at the centre (YYYY-MM-DD). */
   enrolledOn: string;
   exitedOn?: string;
+  /** Why they left; set when archived. */
+  exitReason?: ExitReason;
   notes?: string;
 }
 

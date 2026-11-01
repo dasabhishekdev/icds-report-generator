@@ -12,8 +12,8 @@
   "navigationDividerColor": "#0F766E",
   "navigationDividerColorDark": "#0F766E",
   "backgroundColor": "#F8FAFC",
-  "enableNotifications": false,
-  "startUrl": "/",
+  "enableNotifications": true,
+  "startUrl": "/?apk=2",
   "iconUrl": "https://icds.educoreva.com/icon-512.png",
   "maskableIconUrl": "https://icds.educoreva.com/icon-maskable-512.png",
   "splashScreenFadeOutDuration": 300,
@@ -21,20 +21,24 @@
     "path": "./icds-release.keystore",
     "alias": "icds"
   },
-  "appVersionName": "1.0.0",
-  "appVersionCode": 1,
+  "appVersionName": "1.0.1",
+  "appVersionCode": 2,
   "shortcuts": [
     {
       "name": "Jan Andolan photo",
       "shortName": "Jan Andolan",
-      "url": "/#/jan-andolan",
+      "url": "/?apk=2#/jan-andolan",
       "chosenIconUrl": "https://icds.educoreva.com/icon-192.png"
     }
   ],
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://icds.educoreva.com/manifest.webmanifest",
   "fallbackType": "customtabs",
-  "features": {},
+  "features": {
+    "locationDelegation": {
+      "enabled": true
+    }
+  },
   "alphaDependencies": {
     "enabled": false
   },
@@ -46,5 +50,5 @@
   "fingerprints": [],
   "additionalTrustedOrigins": [],
   "retainedBundles": [],
-  "appVersion": "1.0.0"
+  "appVersion": "1.0.1"
 }

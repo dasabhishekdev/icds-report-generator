@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
-import { Camera, CheckCircle2, CloudOff, Download, Images, Loader2, Share2 } from 'lucide-react';
+import { Camera, CheckCircle2, CloudOff, Download, ImageUp, Images, Loader2, MapPin, MapPinOff, Share2 } from 'lucide-react';
 import { reportError } from '../api/http';
 import { photosApi } from '../api/photos';
 import { photoFileName } from '../domain/photoName';
 import { compressPhoto, PhotoError, type CompressedPhoto, type PhotoErrorCode } from '../lib/compressPhoto';
+import { currentLocation, formatFix, locationPermission, mapsUrl, type GeoFix, type LocationPermission } from '../lib/geolocation';
 import { startDownload } from '../lib/download';
 import { fileSize } from '../lib/format';
 import type { StringKey } from '../i18n/strings';
@@ -18,6 +19,8 @@ interface Result {
   photo: CompressedPhoto;
   name: string;
   capturedAt: Date;
+  /** GPS fix stamped on the photo; null when the phone gave none. */
+  location: GeoFix | null;
   /** Object URL of the reduced photo; lives as long as the result is shown. */
   preview: string;
   /** Set when the phone can share the file (save to gallery, WhatsApp …). */
@@ -26,12 +29,16 @@ interface Result {
 
 type Step =
   | { kind: 'idle' }
-  | { kind: 'working' }
+  | { kind: 'working'; phase: 'locating' | 'compressing' }
   | { kind: 'failed'; code: PhotoErrorCode }
   | ({ kind: 'done'; upload: UploadStatus; savedId: string | null; autoDownloaded: boolean } & Result);
 
 /** Every iPhone/iPad browser, Chrome included; iPadOS reports itself as a Mac with touch. */
 const IS_IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+/** "01 Nov 2026, 08:15 pm IST" as stamped on photos. */
+const stampTime = (d: Date) =>
+  `${d.toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' })} IST`;
 
 const ERROR_TEXT: Record<PhotoErrorCode, StringKey> = {
   tooBig: 'photoTooBig',
@@ -42,8 +49,18 @@ const ERROR_TEXT: Record<PhotoErrorCode, StringKey> = {
 /** Reduce a Jan Andolan photo for the Poshan portal, download it, save it, and open the portal. */
 export function JanAndolanPage() {
   const { t, data } = useApp();
-  const input = useRef<HTMLInputElement>(null);
+  const cameraInput = useRef<HTMLInputElement>(null);
+  const galleryInput = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState<Step>({ kind: 'idle' });
+  const [permission, setPermission] = useState<LocationPermission>('prompt');
+  useEffect(() => {
+    void locationPermission().then(setPermission);
+  }, []);
+
+  async function allowLocation() {
+    await currentLocation();
+    setPermission(await locationPermission());
+  }
   /** Ignores results of a photo the worker has since replaced. */
   const run = useRef(0);
 
@@ -60,7 +77,7 @@ export function JanAndolanPage() {
     };
     update({ upload: 'saving' });
     try {
-      const saved = await photosApi.upload(result.photo, result.capturedAt);
+      const saved = await photosApi.upload(result.photo, result.capturedAt, result.location);
       if (run.current !== id) return;
       update({ upload: 'saved', savedId: saved.id, ...(autoDownload && { autoDownloaded: true }) });
       if (autoDownload) startDownload(photosApi.fileUrl(saved.id), result.name);
@@ -71,17 +88,24 @@ export function JanAndolanPage() {
     }
   }
 
-  async function choose(file: File) {
+  /** Geotags the photo where the phone is now: camera shots are taken here, gallery photos are added here. */
+  async function choose(file: File, fromCamera: boolean) {
     const id = ++run.current;
-    setStep({ kind: 'working' });
+    setStep({ kind: 'working', phase: 'locating' });
     try {
-      const photo = await compressPhoto(file);
+      const location = await currentLocation();
+      void locationPermission().then(setPermission);
       if (run.current !== id) return;
-      const capturedAt = new Date(file.lastModified || Date.now());
-      const name = photoFileName(data.settings.center.number, capturedAt, photo.contentType);
+      setStep({ kind: 'working', phase: 'compressing' });
+      const capturedAt = fromCamera ? new Date() : new Date(file.lastModified || Date.now());
+      const { number, name: centreName } = data.settings.center;
+      const stamp = [location ? formatFix(location) : 'Location not available', stampTime(capturedAt), `AWC ${number} · ${centreName}`];
+      const photo = await compressPhoto(file, stamp);
+      if (run.current !== id) return;
+      const name = photoFileName(number, capturedAt, photo.contentType);
       const asFile = new File([photo.image], name, { type: photo.contentType });
       const shareFile = typeof navigator.canShare === 'function' && navigator.canShare({ files: [asFile] }) ? asFile : null;
-      const result: Result = { photo, name, capturedAt, preview: URL.createObjectURL(photo.image), shareFile };
+      const result: Result = { photo, name, capturedAt, location, preview: URL.createObjectURL(photo.image), shareFile };
       setStep({ kind: 'done', ...result, upload: 'saving', savedId: null, autoDownloaded: false });
       void upload(id, result, true);
     } catch (e) {
@@ -107,22 +131,51 @@ export function JanAndolanPage() {
         </Link>
       </div>
 
+      {(permission === 'prompt' || permission === 'denied') && (
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-amber-300">
+          <MapPinOff size={20} className="shrink-0" />
+          <span className="min-w-0 flex-1">{permission === 'denied' ? t('locationDenied') : t('locationNeeded')}</span>
+          {permission === 'prompt' && (
+            <Button className="shrink-0" onClick={() => void allowLocation()}>
+              <MapPin size={18} /> {t('allowLocation')}
+            </Button>
+          )}
+        </div>
+      )}
+
       <Card hint={t('janAndolanHint')}>
-        <input
-          ref={input}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            e.target.value = '';
-            if (file) void choose(file);
-          }}
-        />
-        <Button variant="primary" className="w-full py-3 text-base" disabled={working} onClick={() => input.current?.click()}>
-          {working ? <Loader2 size={20} className="animate-spin" /> : <Camera size={20} />}
-          {working ? t('compressingPhoto') : step.kind === 'done' ? t('chooseAnotherPhoto') : t('choosePhoto')}
-        </Button>
+        {[
+          { ref: cameraInput, fromCamera: true },
+          { ref: galleryInput, fromCamera: false },
+        ].map(({ ref, fromCamera }) => (
+          <input
+            key={String(fromCamera)}
+            ref={ref}
+            type="file"
+            accept="image/*"
+            {...(fromCamera ? { capture: 'environment' as const } : {})}
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = '';
+              if (file) void choose(file, fromCamera);
+            }}
+          />
+        ))}
+        {working ? (
+          <Button variant="primary" className="w-full py-3 text-base" disabled>
+            <Loader2 size={20} className="animate-spin" /> {step.phase === 'locating' ? t('gettingLocation') : t('compressingPhoto')}
+          </Button>
+        ) : (
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Button variant="primary" className="py-3 text-base" onClick={() => cameraInput.current?.click()}>
+              <Camera size={20} /> {t('takePhoto')}
+            </Button>
+            <Button className="py-3 text-base" onClick={() => galleryInput.current?.click()}>
+              <ImageUp size={20} /> {t('chooseFromGallery')}
+            </Button>
+          </div>
+        )}
         <p className="mt-2 text-center text-xs text-slate-500">{t('photoLimitHint')}</p>
         {step.kind === 'failed' && (
           <div className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700 ring-1 ring-red-200">{t(ERROR_TEXT[step.code])}</div>
@@ -137,6 +190,20 @@ export function JanAndolanPage() {
             <SizeBox label={t('photoReduced')} bytes={step.photo.image.size} width={step.photo.width} height={step.photo.height} highlight />
           </div>
           {step.photo.kept && <p className="mt-2 text-sm text-slate-600">{t('photoKept')}</p>}
+          {step.location ? (
+            <a
+              href={mapsUrl(step.location)}
+              target="_blank"
+              rel="noopener"
+              className="mt-2 flex items-center gap-2 text-sm font-medium text-teal-800 hover:underline"
+            >
+              <MapPin size={16} className="shrink-0" /> {formatFix(step.location)}
+            </a>
+          ) : (
+            <p className="mt-2 flex items-center gap-2 text-sm text-amber-800">
+              <MapPinOff size={16} className="shrink-0" /> {t('photoNoLocation')}
+            </p>
+          )}
           <div className="mt-3 break-all text-xs text-slate-500">{step.name}</div>
           <div className="mt-3 space-y-2">
             <ButtonLink

@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router';
-import { ArrowLeft, Cloud, Download, HardDrive, Loader2, Trash2 } from 'lucide-react';
+import { ArrowLeft, Cloud, Download, HardDrive, Loader2, MapPin, Trash2 } from 'lucide-react';
 import { reportError } from '../api/http';
 import { photosApi, type StoredPhoto } from '../api/photos';
 import { monthLabel } from '../domain/dates';
 import { fileSize } from '../lib/format';
+import { formatFix, mapsUrl } from '../lib/geolocation';
 import { useApp } from '../state/AppDataContext';
 import { Button, ButtonLink, Card } from '../components/ui';
 
@@ -84,6 +85,16 @@ export function SavedPhotosPage() {
                         {p.storage === 's3' ? 'S3' : t('storedOnServer')}
                       </span>
                     </div>
+                    {p.location && (
+                      <a
+                        href={mapsUrl(p.location)}
+                        target="_blank"
+                        rel="noopener"
+                        className="mt-1 flex items-center gap-1 text-xs font-medium text-teal-800 hover:underline"
+                      >
+                        <MapPin size={14} className="shrink-0" /> {formatFix(p.location)}
+                      </a>
+                    )}
                     <div className="mt-2 flex flex-wrap gap-2">
                       <ButtonLink variant="primary" href={photosApi.fileUrl(p.id)} download={p.name} className="ring-2 ring-teal-300 ring-offset-1">
                         <Download size={16} /> {t('downloadPhoto')}

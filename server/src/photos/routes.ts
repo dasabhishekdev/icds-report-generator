@@ -30,6 +30,9 @@ const uploadSchema = z.strictObject({
   originalHeight: pixels,
   image: base64Of(MAX_IMAGE_BYTES),
   thumb: base64Of(MAX_THUMB_BYTES),
+  location: z
+    .strictObject({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180), accuracy: z.number().min(0).max(1e6) })
+    .optional(),
 });
 const listSchema = z.strictObject({ month: monthSchema.optional() });
 const idParams = z.strictObject({ id: z.string().regex(/^[a-f0-9]{24}$/) });
@@ -50,6 +53,7 @@ export function publicPhoto(doc: PhotoDoc) {
     originalHeight: doc.originalHeight,
     capturedAt: doc.capturedAt.toISOString(),
     createdAt: doc.createdAt.toISOString(),
+    ...(doc.location ? { location: doc.location } : {}),
     storage: doc.storage,
   };
 }
@@ -90,6 +94,7 @@ export function registerPhotoRoutes(app: FastifyInstance, c: Collections, storag
         originalWidth: body.originalWidth,
         originalHeight: body.originalHeight,
         capturedAt,
+        ...(body.location ? { location: body.location } : {}),
         createdAt: new Date(),
         storage: storage.kind,
         key: `${prefix}/${name}`,

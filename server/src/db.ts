@@ -72,6 +72,8 @@ export interface PhotoDoc {
   originalWidth: number;
   originalHeight: number;
   capturedAt: Date;
+  /** GPS fix stamped on the photo, when the phone gave one. */
+  location?: { lat: number; lng: number; accuracy: number };
   createdAt: Date;
   storage: 's3' | 'disk';
   key: string;

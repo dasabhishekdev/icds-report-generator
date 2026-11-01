@@ -29,10 +29,16 @@ export interface CompressedPhoto {
   kept: boolean;
 }
 
+/** Lines stamped along the bottom of the photo (location, time, centre); empty for none. */
+export interface CompressRequest {
+  file: File;
+  stamp: string[];
+}
+
 export type CompressWorkerReply = ({ ok: true } & CompressedPhoto) | { ok: false; code: Exclude<PhotoErrorCode, 'tooBig'> };
 
 /** Shrinks a photo to at most 1.5 MB in a worker, so the page stays responsive. */
-export function compressPhoto(file: File): Promise<CompressedPhoto> {
+export function compressPhoto(file: File, stamp: string[] = []): Promise<CompressedPhoto> {
   if (file.size > MAX_PHOTO_INPUT) return Promise.reject(new PhotoError('tooBig'));
   const worker = new Worker(new URL('./compressImage.worker.ts', import.meta.url), { type: 'module' });
   return new Promise<CompressedPhoto>((resolve, reject) => {
@@ -42,6 +48,6 @@ export function compressPhoto(file: File): Promise<CompressedPhoto> {
       else reject(new PhotoError(reply.code));
     };
     worker.onerror = () => reject(new PhotoError('unreadable'));
-    worker.postMessage(file);
+    worker.postMessage({ file, stamp } satisfies CompressRequest);
   }).finally(() => worker.terminate());
 }

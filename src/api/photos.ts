@@ -1,5 +1,6 @@
 import type { PhotoContentType } from '../domain/photoName';
 import type { CompressedPhoto } from '../lib/compressPhoto';
+import type { GeoFix } from '../lib/geolocation';
 import { api } from './http';
 
 export interface StoredPhoto {
@@ -14,6 +15,7 @@ export interface StoredPhoto {
   originalWidth: number;
   originalHeight: number;
   capturedAt: string;
+  location?: GeoFix;
   createdAt: string;
   storage: 's3' | 'disk';
 }
@@ -29,7 +31,7 @@ function base64(blob: Blob): Promise<string> {
 
 export const photosApi = {
   list: (month?: string) => api<StoredPhoto[]>('GET', `/api/photos${month ? `?month=${month}` : ''}`),
-  upload: async (photo: CompressedPhoto, capturedAt: Date) =>
+  upload: async (photo: CompressedPhoto, capturedAt: Date, location: GeoFix | null) =>
     api<StoredPhoto>('POST', '/api/photos', {
       capturedAt: capturedAt.toISOString(),
       contentType: photo.contentType,
@@ -40,6 +42,7 @@ export const photosApi = {
       originalHeight: photo.originalHeight,
       image: await base64(photo.image),
       thumb: await base64(photo.thumb),
+      ...(location ? { location } : {}),
     }),
   remove: (id: string) => api<void>('DELETE', `/api/photos/${id}`),
   fileUrl: (id: string) => `/api/photos/${id}/file`,

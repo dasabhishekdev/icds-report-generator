@@ -158,6 +158,11 @@ describe.skipIf(!MONGO_URL)('API', () => {
     const legacyFuel = { fuelItems: [{ id: 'fuel', name: 'Coal', unit: 'Kg', rate: 5, qtyPerBeneficiaryDay: 0 }] };
     expect((await call(cookie, 'PATCH', '/api/settings', legacyFuel)).statusCode).toBe(200);
 
+    const migrated = { id: 'kid-m', kind: 'child', name: 'Moved Away', gender: 'M', dob: '2023-01-01', enrolledOn: '2026-01-01', exitedOn: '2026-11-01', exitReason: 'migrated' };
+    expect((await call(cookie, 'PUT', '/api/beneficiaries/kid-m', migrated)).statusCode).toBe(200);
+    expect((await call(cookie, 'PUT', '/api/beneficiaries/kid-m', { ...migrated, exitReason: 'vanished' })).statusCode).toBe(400);
+    expect((await call(cookie, 'DELETE', '/api/beneficiaries/kid-m')).statusCode).toBe(204);
+
     const noDob = { id: 'kid-x', kind: 'child', name: 'No DOB', gender: 'F', enrolledOn: '2026-01-01' };
     expect((await call(cookie, 'PUT', '/api/beneficiaries/kid-x', noDob)).statusCode).toBe(200);
     expect((await call(cookie, 'GET', '/api/data')).json().beneficiaries).toEqual([noDob]);

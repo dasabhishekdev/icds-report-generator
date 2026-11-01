@@ -61,6 +61,7 @@ const beneficiaryBase = {
   name: text(120).min(1),
   enrolledOn: isoDateSchema,
   exitedOn: isoDateSchema.optional(),
+  exitReason: z.enum(['migrated', 'other']).optional(),
   notes: text(500).optional(),
 };
 

@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from 'react';
-import { LogIn, UserPlus } from 'lucide-react';
+import { LogIn, Smartphone, UserPlus } from 'lucide-react';
 import { authApi, type User } from '../api/auth';
 import { ApiError } from '../api/http';
 import type { CenterInfo, Language } from '../db/schema';
 import type { StringKey } from '../i18n/strings';
 import { rememberLanguage, storedLanguage, translator } from '../i18n/lang';
+import { APK_DOWNLOAD_URL, isAndroidBrowser } from '../lib/androidApp';
 import { Button, Field, Segmented, TextInput } from '../components/ui';
 import { ShowcaseGallery, ShowcaseIntro } from './Showcase';
 
@@ -61,13 +62,24 @@ export function AuthPage({ onAuthenticated }: { onAuthenticated: (user: User) =>
               <div className="text-sm text-teal-100">{t('authTagline')}</div>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => setLang(lang === 'bn' ? 'en' : 'bn')}
-            className="rounded-full bg-white/15 px-3 py-1.5 text-sm font-semibold hover:bg-white/25"
-          >
-            {lang === 'bn' ? 'English' : 'বাংলা'}
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            {isAndroidBrowser() && (
+              <a
+                href={APK_DOWNLOAD_URL}
+                download
+                className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-sm font-semibold text-teal-800 hover:bg-teal-50"
+              >
+                <Smartphone size={16} /> {t('androidApp')}
+              </a>
+            )}
+            <button
+              type="button"
+              onClick={() => setLang(lang === 'bn' ? 'en' : 'bn')}
+              className="rounded-full bg-white/15 px-3 py-1.5 text-sm font-semibold hover:bg-white/25"
+            >
+              {lang === 'bn' ? 'English' : 'বাংলা'}
+            </button>
+          </div>
         </header>
 
         <div className="grid gap-8 md:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] md:items-start">

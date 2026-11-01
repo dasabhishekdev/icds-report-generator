@@ -9,8 +9,8 @@ import { Button, Modal, Segmented, TextInput } from '../components/ui';
 import { BeneficiaryForm } from './BeneficiaryForm';
 
 type Filter = 'all' | 'mother' | 'child';
-/** A category id, every category, or people in none (aged out, no age, left, not yet joined). */
-type CategoryFilter = 'all' | 'none' | (string & {});
+/** A category id, every active person, the archived, or active people in no category (aged out, no age, not yet joined). */
+type CategoryFilter = 'all' | 'none' | 'archived' | (string & {});
 
 export function BeneficiariesPage() {
   const { data, t, lang, label } = useApp();
@@ -33,7 +33,8 @@ export function BeneficiariesPage() {
       .map((b) => {
         const category = resolveCategory(b, today, categories, settings.nursingMonths);
         const enrolled = isEnrolledOn(b, today);
-        return { b, category, enrolled };
+        const archived = b.exitedOn !== undefined && today >= b.exitedOn;
+        return { b, category, enrolled, archived };
       })
       .sort((x, y) => {
         const rank = (r: typeof x) => (r.category ? r.category.sortOrder : 99);
@@ -41,8 +42,9 @@ export function BeneficiariesPage() {
       });
   }, [beneficiaries, filter, query, showMissingOnly, categories, settings.nursingMonths, today]);
 
-  const countIn = (id: CategoryFilter) =>
-    id === 'all' ? matching.length : matching.filter((r) => (id === 'none' ? !r.category : r.category?.id === id)).length;
+  const inFilter = (r: (typeof matching)[number], id: CategoryFilter) =>
+    id === 'archived' ? r.archived : !r.archived && (id === 'all' || (id === 'none' ? !r.category : r.category?.id === id));
+  const countIn = (id: CategoryFilter) => matching.filter((r) => inFilter(r, id)).length;
   const categoryChips: { id: CategoryFilter; text: string }[] = [
     { id: 'all', text: t('all') },
     ...[...categories]
@@ -50,12 +52,10 @@ export function BeneficiariesPage() {
       .filter((c) => filter === 'all' || c.group === filter)
       .map((c) => ({ id: c.id, text: label(c.name) })),
     ...(countIn('none') > 0 ? [{ id: 'none' as const, text: t('noCategory') }] : []),
+    ...(countIn('archived') > 0 ? [{ id: 'archived' as const, text: t('archived') }] : []),
   ];
   const activeCategory = categoryChips.some((chip) => chip.id === categoryFilter) ? categoryFilter : 'all';
-  const rows =
-    activeCategory === 'all'
-      ? matching
-      : matching.filter((r) => (activeCategory === 'none' ? !r.category : r.category?.id === activeCategory));
+  const rows = matching.filter((r) => inFilter(r, activeCategory));
 
   const month = monthOf(today);
   const motherDetail = (m: MotherBeneficiary) => {
@@ -71,7 +71,10 @@ export function BeneficiariesPage() {
   };
 
   const badge = (r: (typeof rows)[number]) => {
-    if (r.b.exitedOn && today >= r.b.exitedOn) return { text: t('exited'), cls: 'bg-slate-200 text-slate-600' };
+    if (r.archived) {
+      const reason = r.b.exitReason === 'migrated' ? ` · ${t('reasonMigrated')}` : '';
+      return { text: `${t('archived')}${reason}`, cls: 'bg-slate-200 text-slate-600' };
+    }
     if (!r.enrolled) return { text: t('inactive'), cls: 'bg-slate-200 text-slate-600' };
     if (r.b.kind === 'child' && !r.b.dob) return { text: t('dobMissing'), cls: 'bg-amber-100 text-amber-900 ring-1 ring-amber-300' };
     if (!r.category) return { text: t('agedOut'), cls: 'bg-amber-100 text-amber-800' };
