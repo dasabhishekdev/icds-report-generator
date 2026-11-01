@@ -52,7 +52,7 @@ describe('September 2026 reports', () => {
   });
 
   it('stock register carries balances with formulas', () => {
-    expect(v(stock, 'U3')).toBe('খাদ্য সামগ্রী-৩: চাল (Rice) [OB: 339030]');
+    expect(v(stock, 'U3')).toBe('খাদ্য সামগ্রী-৩: চাল (Rice) [OB: 339030 গ্রাম (g)]');
     expect(stock.cells.get('W5')).toMatchObject({ value: 336030, formula: '339030+U5-V5' });
     expect(v(stock, 'W34')).toBe(267310);
     expect(v(stock, 'X20')).toBe(30000);
@@ -67,6 +67,15 @@ describe('September 2026 reports', () => {
     expect(v(stock, 'T6')).toBeNull();
     expect(stock.cells.get('S35')).toMatchObject({ value: 4710, formula: 'SUM(S5:S34)' });
     expect(v(stock, 'T35')).toBeNull();
+  });
+
+  it('stock register use and balance are quantities in grams, not money', () => {
+    expect(v(stock, 'V4')).toBe('খরচ (চাল)\nগ্রাম (g)');
+    expect(v(stock, 'W4')).toBe('মজুত (চাল)\nগ্রাম (g)');
+    expect(v(stock, 'S4')).toBe('খরচ (ছাতু)\nগ্রাম (g)');
+    for (const address of ['S6', 'V5', 'W5', 'W34', 'S35', 'V35', 'W35']) {
+      expect(stock.cells.get(address)?.style.numFmt, address).toBe('#,##0.##');
+    }
   });
 
   it('writes a valid xlsx workbook', async () => {

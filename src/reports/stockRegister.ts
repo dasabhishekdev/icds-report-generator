@@ -10,6 +10,8 @@ import { REPORT_TITLES } from './titles';
 const CHATU_COL = 18;
 const STOCK_COL: Record<StockItemKey, number> = { rice: 21, dal: 24, oil: 27, salt: 30 };
 const BN_DIGITS = '০১২৩৪৫৬৭৮৯';
+/** Receipts, use and balances are quantities in grams, never money. */
+const GRAMS = 'গ্রাম (g)';
 
 export function buildStockRegister(summary: MonthSummary, settings: Settings): SheetModel {
   const c = settings.center;
@@ -40,11 +42,11 @@ export function buildStockRegister(summary: MonthSummary, settings: Settings): S
     const range = `${colLetter(col)}3:${colLetter(col + 2)}3`;
     b.mergeSet(
       range,
-      `খাদ্য সামগ্রী-${BN_DIGITS[i + 3]}: ${STOCK_LABEL[item]} (${STOCK_LABEL_EN[item]}) [OB: ${trimNum(summary.opening[item])}]`,
+      `খাদ্য সামগ্রী-${BN_DIGITS[i + 3]}: ${STOCK_LABEL[item]} (${STOCK_LABEL_EN[item]}) [OB: ${trimNum(summary.opening[item])} ${GRAMS}]`,
       S.header,
     );
   });
-  b.height(3, 22);
+  b.height(3, 32);
 
   const sub = [
     'তারিখ', 'খাবার', 'গর্ভবতী', 'প্রসূতি',
@@ -54,11 +56,11 @@ export function buildStockRegister(summary: MonthSummary, settings: Settings): S
   sub.forEach((h, i) => b.set(addr(4, i + 1), h, S.subHeader));
   const groups: [number, string][] = [[CHATU_COL, 'ছাতু'], ...STOCK_ITEM_KEYS.map((item): [number, string] => [STOCK_COL[item], STOCK_LABEL[item]])];
   for (const [col, name] of groups) {
-    b.set(addr(4, col), `প্রাপ্তি (${name})`, S.subHeader)
-      .set(addr(4, col + 1), `খরচ (${name})`, S.subHeader)
-      .set(addr(4, col + 2), `মজুত (${name})`, S.subHeader);
+    b.set(addr(4, col), `প্রাপ্তি (${name})\n${GRAMS}`, S.subHeader)
+      .set(addr(4, col + 1), `খরচ (${name})\n${GRAMS}`, S.subHeader)
+      .set(addr(4, col + 2), `মজুত (${name})\n${GRAMS}`, S.subHeader);
   }
-  b.height(4, 28);
+  b.height(4, 36);
 
   const first = 5;
   const lastBalance: Record<StockItemKey, string> = { rice: '', dal: '', oil: '', salt: '' };

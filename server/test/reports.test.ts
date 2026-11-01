@@ -174,7 +174,7 @@ describe.skipIf(!MONGO_URL || !CHROME).each(backends)('report generation with $n
     await wb.xlsx.load((await call(cookie, 'GET', `/api/reports/${body.id}/files/xlsx`)).rawPayload as unknown as ArrayBuffer);
     const stock = wb.worksheets[0];
     // Opening rice for 7 Sep = 339030 minus the 1st–5th consumption (3000+2180+3000+2180+3000).
-    expect(stock.getCell('U3').value).toBe('খাদ্য সামগ্রী-৩: চাল (Rice) [OB: 325670]');
+    expect(stock.getCell('U3').value).toBe('খাদ্য সামগ্রী-৩: চাল (Rice) [OB: 325670 গ্রাম (g)]');
     expect(stock.getCell('A5').value).toBe(7);
     expect(stock.getCell('A1').value).toContain('07.09.2026 - 12.09.2026');
   }, 120_000);
