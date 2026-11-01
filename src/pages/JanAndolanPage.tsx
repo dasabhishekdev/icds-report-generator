@@ -5,12 +5,13 @@ import { reportError } from '../api/http';
 import { photosApi } from '../api/photos';
 import { photoFileName } from '../domain/photoName';
 import { compressPhoto, PhotoError, type CompressedPhoto, type PhotoErrorCode } from '../lib/compressPhoto';
-import { currentLocation, formatFix, locationPermission, mapsUrl, type GeoFix, type LocationPermission } from '../lib/geolocation';
+import { formatFix, mapsUrl, requestLocation, type GeoFix, type LocationFailure } from '../lib/geolocation';
 import { startDownload } from '../lib/download';
 import { fileSize } from '../lib/format';
 import type { StringKey } from '../i18n/strings';
 import { useApp } from '../state/AppDataContext';
 import { Button, ButtonLink, Card } from '../components/ui';
+import { LOCATION_FAILURE_TEXT, LocationAccess } from '../components/LocationAccess';
 import { PortalShortcutCard } from '../components/PortalShortcutCard';
 
 type UploadStatus = 'saving' | 'saved' | 'failed';
@@ -21,6 +22,7 @@ interface Result {
   capturedAt: Date;
   /** GPS fix stamped on the photo; null when the phone gave none. */
   location: GeoFix | null;
+  locationFailure: LocationFailure | null;
   /** Object URL of the reduced photo; lives as long as the result is shown. */
   preview: string;
   /** Set when the phone can share the file (save to gallery, WhatsApp …). */
@@ -52,15 +54,6 @@ export function JanAndolanPage() {
   const cameraInput = useRef<HTMLInputElement>(null);
   const galleryInput = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState<Step>({ kind: 'idle' });
-  const [permission, setPermission] = useState<LocationPermission>('prompt');
-  useEffect(() => {
-    void locationPermission().then(setPermission);
-  }, []);
-
-  async function allowLocation() {
-    await currentLocation();
-    setPermission(await locationPermission());
-  }
   /** Ignores results of a photo the worker has since replaced. */
   const run = useRef(0);
 
@@ -93,8 +86,9 @@ export function JanAndolanPage() {
     const id = ++run.current;
     setStep({ kind: 'working', phase: 'locating' });
     try {
-      const location = await currentLocation();
-      void locationPermission().then(setPermission);
+      const located = await requestLocation();
+      const location = located.ok ? located.fix : null;
+      const locationFailure = located.ok ? null : located.reason;
       if (run.current !== id) return;
       setStep({ kind: 'working', phase: 'compressing' });
       const capturedAt = fromCamera ? new Date() : new Date(file.lastModified || Date.now());
@@ -105,7 +99,7 @@ export function JanAndolanPage() {
       const name = photoFileName(number, capturedAt, photo.contentType);
       const asFile = new File([photo.image], name, { type: photo.contentType });
       const shareFile = typeof navigator.canShare === 'function' && navigator.canShare({ files: [asFile] }) ? asFile : null;
-      const result: Result = { photo, name, capturedAt, location, preview: URL.createObjectURL(photo.image), shareFile };
+      const result: Result = { photo, name, capturedAt, location, locationFailure, preview: URL.createObjectURL(photo.image), shareFile };
       setStep({ kind: 'done', ...result, upload: 'saving', savedId: null, autoDownloaded: false });
       void upload(id, result, true);
     } catch (e) {
@@ -131,17 +125,7 @@ export function JanAndolanPage() {
         </Link>
       </div>
 
-      {(permission === 'prompt' || permission === 'denied') && (
-        <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-amber-300">
-          <MapPinOff size={20} className="shrink-0" />
-          <span className="min-w-0 flex-1">{permission === 'denied' ? t('locationDenied') : t('locationNeeded')}</span>
-          {permission === 'prompt' && (
-            <Button className="shrink-0" onClick={() => void allowLocation()}>
-              <MapPin size={18} /> {t('allowLocation')}
-            </Button>
-          )}
-        </div>
-      )}
+      <LocationAccess variant="page" />
 
       <Card hint={t('janAndolanHint')}>
         {[
@@ -201,7 +185,7 @@ export function JanAndolanPage() {
             </a>
           ) : (
             <p className="mt-2 flex items-center gap-2 text-sm text-amber-800">
-              <MapPinOff size={16} className="shrink-0" /> {t('photoNoLocation')}
+              <MapPinOff size={16} className="shrink-0" /> {t('photoNoLocation')} {step.locationFailure && t(LOCATION_FAILURE_TEXT[step.locationFailure])}
             </p>
           )}
           <div className="mt-3 break-all text-xs text-slate-500">{step.name}</div>

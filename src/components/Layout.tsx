@@ -4,6 +4,7 @@ import { CalendarDays, Camera, ClipboardCheck, FileSpreadsheet, LogOut, Settings
 import { useApp } from '../state/AppDataContext';
 import type { StringKey } from '../i18n/strings';
 import { AppUpdateBanner } from './AppUpdateBanner';
+import { LocationAccess } from './LocationAccess';
 
 const NAV: { to: string; label: StringKey; icon: typeof Users }[] = [
   { to: '/', label: 'navAttendance', icon: ClipboardCheck },
@@ -94,7 +95,8 @@ export function Layout() {
         </header>
         <div ref={scroller} className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain">
           <main className="mx-auto min-h-full max-w-5xl px-2.5 pt-3 pb-6 min-[390px]:px-3 md:px-8 md:pt-8 md:pb-10">
-            <AppUpdateBanner />
+            <AppUpdateBanner t={t} />
+            <LocationAccess variant="global" />
             <Outlet />
           </main>
         </div>

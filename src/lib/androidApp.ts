@@ -14,11 +14,19 @@ export interface AndroidRelease {
   size: number;
 }
 
-/** Remembers the version the Android app launched with, then drops it from the address bar. */
+const APP_REFERRER = 'android-app://com.educoreva.icds';
+
+/**
+ * Remembers the version the Android app launched with, then drops it from the address bar.
+ * Version 1.0.0 opened the site without `?apk`; its launch referrer still identifies the app.
+ */
 export function rememberApkVersion(): void {
   const params = new URLSearchParams(window.location.search);
   const version = params.get('apk');
-  if (!version) return;
+  if (!version) {
+    if (document.referrer.startsWith(APP_REFERRER) && !localStorage.getItem(APK_VERSION_KEY)) localStorage.setItem(APK_VERSION_KEY, '1');
+    return;
+  }
   if (/^\d{1,6}$/.test(version)) localStorage.setItem(APK_VERSION_KEY, version);
   params.delete('apk');
   const query = params.toString();

@@ -1,13 +1,16 @@
-import { useRef, useState } from 'react';
-import { Download, KeyRound, LogOut, Mail, Trash2, Upload, UserRound } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Download, KeyRound, LogOut, Mail, Smartphone, Trash2, Upload, UserRound } from 'lucide-react';
 import { authApi } from '../../api/auth';
 import { dataApi, exportBackup } from '../../api/data';
 import type { BackupFile, CenterInfo, Language, Settings } from '../../db/schema';
 import { todayIso } from '../../domain/dates';
+import { APK_DOWNLOAD_URL, installedApkVersion, latestAndroidRelease, type AndroidRelease } from '../../lib/androidApp';
 import { downloadJson } from '../../lib/download';
+import { fileSize } from '../../lib/format';
 import type { StringKey } from '../../i18n/strings';
 import { useApp } from '../../state/AppDataContext';
 import { Button, ButtonLink, Card, Field, Flash, Modal, Segmented, TextInput, useFlash } from '../../components/ui';
+import { LocationCheck } from '../../components/LocationAccess';
 import { PortalLoginCard } from '../../components/PortalLoginCard';
 import { SettingsHeader } from './SettingsHeader';
 
@@ -25,6 +28,7 @@ export function AccountSettingsPage() {
       <PortalLoginCard onDone={(msg) => setFlash(msg)} />
       <CentreCard key={JSON.stringify(data.settings.center)} onSaved={saved} />
       <LanguageCard />
+      <AppPermissionsCard />
       <DataCard onDone={() => setFlash(t('done'))} />
       <ContactCard />
       <Flash message={flash} />
@@ -125,6 +129,39 @@ function CentreCard({ onSaved }: { onSaved: (ok: boolean) => void }) {
       <Button variant="primary" className="mt-4" disabled={!center.name.trim() || !center.number.trim()} onClick={() => void saveSettings({ center }).then(onSaved)}>
         {t('save')}
       </Button>
+    </Card>
+  );
+}
+
+/** Location check for geotagged photos, and the Android app version with the latest download. */
+function AppPermissionsCard() {
+  const { t } = useApp();
+  const [release, setRelease] = useState<AndroidRelease | null>(null);
+  useEffect(() => {
+    void latestAndroidRelease().then(setRelease);
+  }, []);
+  const installed = installedApkVersion();
+  const outdated = release !== null && installed > 0 && release.versionCode > installed;
+  return (
+    <Card title={t('appPermissionsTitle')}>
+      <LocationCheck />
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-4 text-sm text-slate-700">
+        <span>
+          <Smartphone size={16} className="mr-1 inline align-[-3px]" />
+          {installed > 0 && (
+            <>
+              {t('androidInstalled')}: <b>{installed === release?.versionCode ? release.versionName : installed === 1 ? `1.0.0 (${t('oldAppVersion')})` : `#${installed}`}</b> ·{' '}
+            </>
+          )}
+          {t('androidLatest')}: <b>{release ? `${release.versionName} (${fileSize(release.size)})` : '…'}</b>
+          {installed > 0 && release && !outdated && <span className="ml-2 text-teal-700">✓ {t('upToDate')}</span>}
+        </span>
+        {(outdated || installed === 0) && (
+          <ButtonLink href={APK_DOWNLOAD_URL} download variant={outdated ? 'primary' : 'secondary'}>
+            <Download size={18} /> {outdated ? t('appUpdateDownload') : t('downloadAndroid')}
+          </ButtonLink>
+        )}
+      </div>
     </Card>
   );
 }
