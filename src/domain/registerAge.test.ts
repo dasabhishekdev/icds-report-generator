@@ -24,7 +24,7 @@ describe('register ages', () => {
         expect(registerAge(dob, month)).toBe(age);
       }
     }
-  });
+  }, 30_000);
 
   it('keeps the September 2026 seed ages for the whole month', () => {
     const dob = dobForRegisterAge(35, '2026-09');

@@ -14,8 +14,20 @@ export function monthsBetween(fromMonth: string, toMonth: string): number {
   return (ty - fy) * 12 + (tm - fm);
 }
 
-const daysAtAge = (dob: string, months: number, month: string) =>
-  dateRange(`${month}-01`, lastDateOfMonth(month)).filter((date) => ageGroupMonths(dob, date) === months).length;
+/** Days in `dates` (ascending) on which the child is exactly `months`; age never falls as dates rise. */
+function daysAtAge(dob: string, months: number, dates: readonly string[]): number {
+  const firstWhere = (test: (age: number) => boolean) => {
+    let lo = 0;
+    let hi = dates.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (test(ageGroupMonths(dob, dates[mid]))) hi = mid;
+      else lo = mid + 1;
+    }
+    return lo;
+  };
+  return firstWhere((age) => age > months) - firstWhere((age) => age >= months);
+}
 
 /**
  * A date of birth that keeps the child at `months` on as many days of `month` as the calendar
@@ -24,11 +36,13 @@ const daysAtAge = (dob: string, months: number, month: string) =>
 export function dobForRegisterAge(months: number, month: string): string {
   const anchor = addMonths(`${month}-01`, -months);
   const next = shiftMonth(month, 1);
+  const days = dateRange(`${month}-01`, lastDateOfMonth(month));
+  const nextDays = dateRange(`${next}-01`, lastDateOfMonth(next));
   let best = anchor;
   let bestScore = -1;
   for (let i = -31; i <= 31; i += 1) {
     const dob = addDays(anchor, i);
-    const score = daysAtAge(dob, months, month) * 100 + daysAtAge(dob, months + 1, next);
+    const score = daysAtAge(dob, months, days) * 100 + daysAtAge(dob, months + 1, nextDays);
     if (score > bestScore) [best, bestScore] = [dob, score];
   }
   return best;
