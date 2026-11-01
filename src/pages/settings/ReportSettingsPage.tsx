@@ -2,16 +2,33 @@ import { useState } from 'react';
 import { CalendarCheck, CalendarX, ChevronLeft, ChevronRight, Plus, RefreshCw, RotateCcw, Trash2 } from 'lucide-react';
 import { dataApi, newId } from '../../api/data';
 import { emptyNorms } from '../../db/defaults';
-import { STATE_HOLIDAY_MODES, type Category, type FuelItem, type Settings, type StateHolidayMode } from '../../db/schema';
+import {
+  MEAL_TYPES,
+  PURCHASED_ITEM_KEYS,
+  STATE_HOLIDAY_MODES,
+  type Category,
+  type CategoryGroup,
+  type FuelItem,
+  type MealType,
+  type Settings,
+  type StateHolidayMode,
+} from '../../db/schema';
+import { itemCost } from '../../domain/calc';
 import { WEEKDAYS_BN, WEEKDAYS_EN, formatMonths, prettyDate, todayIso } from '../../domain/dates';
 import { stateHolidayMode, type HolidaySource } from '../../domain/holidays';
 import type { StringKey } from '../../i18n/strings';
+import { ITEM_LABEL, MEAL_LABEL, formatQty, rupees } from '../../lib/format';
 import { useApp } from '../../state/AppDataContext';
 import { Button, Card, Field, Flash, Modal, NumberInput, Segmented, TextInput, Toggle, useFlash } from '../../components/ui';
 import { CategoryEditor } from '../CategoryEditor';
 import { SettingsHeader } from './SettingsHeader';
 
 const saveSettings = (patch: Partial<Omit<Settings, 'id'>>) => dataApi.saveSettings(patch);
+
+const CATEGORY_GROUPS: { group: CategoryGroup; title: StringKey }[] = [
+  { group: 'mother', title: 'mothers' },
+  { group: 'child', title: 'children' },
+];
 
 /** Everything the ration calculation and the registers depend on. */
 export function ReportSettingsPage() {
@@ -120,6 +137,12 @@ function CategoriesCard() {
     c.group === 'mother'
       ? t(c.motherStage === 'nursing' ? 'nursing' : 'pregnant')
       : `${formatMonths(c.minMonths ?? 0, lang)} – ${c.maxMonths === undefined ? '∞' : formatMonths(c.maxMonths, lang)}`;
+  const sorted = [...data.categories].sort((a, b) => a.sortOrder - b.sortOrder);
+  /** Bought items per head for one meal, e.g. "Egg 1 pcs = ₹8.50 · Potato 30 g = ₹0.84". */
+  const mealMoney = (c: Category, meal: MealType) =>
+    PURCHASED_ITEM_KEYS.filter((item) => c.norms[meal][item] > 0)
+      .map((item) => `${t(ITEM_LABEL[item])} ${formatQty(item, c.norms[meal][item], t)} = ${rupees(itemCost(item, c.norms[meal][item], data.settings.rates))}`)
+      .join(' · ');
 
   const addNew = () => {
     const maxOrder = Math.max(0, ...data.categories.map((c) => c.sortOrder));
@@ -139,24 +162,39 @@ function CategoriesCard() {
         </Button>
       }
     >
-      <ul className="divide-y divide-slate-100">
-        {data.categories.map((c) => (
-          <li key={c.id}>
-            <button type="button" onClick={() => setEditing({ category: c, isNew: false })} className="flex w-full items-center gap-3 py-3 text-left">
-              <span className="min-w-0 flex-1">
-                <span className="block font-semibold text-slate-900">{label(c.name)}</span>
-                <span className="block text-xs text-slate-500">
-                  {range(c)}
-                  {c.servesMeal
-                    ? ` · ${t('khichuri')}: ${t('itemRice')} ${c.norms.khichuri.rice}g, ${t('itemEgg')} ${c.norms.khichuri.egg} · ${t('rice')}: ${t('itemRice')} ${c.norms.rice.rice}g, ${t('itemEgg')} ${c.norms.rice.egg}`
-                    : ` · ${t('notServed')}`}
-                </span>
-              </span>
-              <ChevronRight size={18} className="text-slate-400" />
-            </button>
-          </li>
-        ))}
-      </ul>
+      <div className="space-y-4">
+        {CATEGORY_GROUPS.map(({ group, title }) => {
+          const members = sorted.filter((c) => c.group === group);
+          if (!members.length) return null;
+          return (
+            <section key={group}>
+              <h3 className="text-xs font-bold tracking-wide text-slate-500 uppercase">{t(title)}</h3>
+              <ul className="divide-y divide-slate-100">
+                {members.map((c) => (
+                  <li key={c.id}>
+                    <button type="button" onClick={() => setEditing({ category: c, isNew: false })} className="flex w-full items-center gap-3 py-3 text-left">
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-semibold text-slate-900">{label(c.name)}</span>
+                        <span className="block text-xs text-slate-500">
+                          {range(c)}
+                          {!c.servesMeal && ` · ${t('notServed')}`}
+                        </span>
+                        {c.servesMeal &&
+                          MEAL_TYPES.map((meal) => (
+                            <span key={meal} className="block text-xs text-slate-600">
+                              <b>{t(MEAL_LABEL[meal])}:</b> {mealMoney(c, meal) || '—'}
+                            </span>
+                          ))}
+                      </span>
+                      <ChevronRight size={18} className="text-slate-400" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          );
+        })}
+      </div>
       <Modal open={editing !== null} onClose={() => setEditing(null)} title={editing?.isNew ? t('addCategory') : t('edit')}>
         {editing && <CategoryEditor key={editing.category.id} category={editing.category} isNew={editing.isNew} onDone={() => setEditing(null)} />}
       </Modal>

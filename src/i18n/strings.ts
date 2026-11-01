@@ -180,8 +180,8 @@ const strings = {
     en: 'Prices of what you buy from the shop — egg per piece; vegetables, potato and chatu per kg. The voucher and SNP register amounts use these rates. Update them when prices change.',
   },
   hintCategories: {
-    bn: 'কারা রান্না করা খাবার পান আর মাথাপিছু কতটা। শিশুরা জন্ম তারিখ অনুযায়ী নিজে থেকে বিভাগ বদলায়। খিচুড়ি ও ভাতের দিনের বরাদ্দ থেকেই রোজকার রেশন, মজুত খরচ ও রিপোর্ট হিসাব হয়।',
-    en: 'Who gets a cooked meal and how much per head. Children change category automatically from their date of birth. The khichuri and rice norms drive the daily ration, stock use and all reports.',
+    bn: 'কারা রান্না করা খাবার পান আর মাথাপিছু কতটা। শিশুরা বয়স অনুযায়ী নিজে থেকে বিভাগ বদলায়। ডিম, সবজি, আলু ও ছাতুর পাশে মাথাপিছু টাকা দেখানো হয়। খিচুড়ি ও ভাতের দিনের বরাদ্দ থেকেই রোজকার রেশন, মজুত খরচ ও রিপোর্ট হিসাব হয়।',
+    en: 'Who gets a cooked meal and how much per head. Children change category automatically by age. Eggs, vegetables, potato and chatu show the money per head. The khichuri and rice norms drive the daily ration, stock use and all reports.',
   },
   hintHolidays: {
     bn: 'যেদিন কেন্দ্র বন্ধ, সেদিন রান্না হয় না আর রিপোর্টে "ছুটি" লেখা হয়। সাপ্তাহিক ছুটি, সরকারি ছুটির তালিকা ও কেন্দ্রের নিজস্ব ছুটি — তিনটিই এখানে ঠিক করুন।',
@@ -277,8 +277,8 @@ const strings = {
   language: { bn: 'ভাষা', en: 'Language' },
   nursingMonths: { bn: 'প্রসূতি থাকার সময় (মাস)', en: 'Nursing period (months)' },
   nursingHint: {
-    bn: 'প্রসবের পর মা কত মাস "প্রসূতি" বিভাগে থেকে রান্না করা খাবার পাবেন। উপকারভোগীর ফর্মে প্রসবের তারিখ দিলে মা গর্ভবতী থেকে প্রসূতি হন, এই সময় পেরোলে নিজে থেকে তালিকা থেকে বাদ যান। সাধারণত ৬ মাস।',
-    en: 'How many months after delivery a mother stays in the "Nursing" category and gets cooked meals. Entering the delivery date on her form moves her from pregnant to nursing; after this period she drops out automatically. Usually 6 months.',
+    bn: 'প্রসবের পর মা কত মাস "প্রসূতি" বিভাগে থেকে রান্না করা খাবার পাবেন। উপকারভোগীর ফর্মে "প্রসূতি" বেছে শিশুর বয়স দিলে মা গর্ভবতী থেকে প্রসূতি হন, এই সময় পেরোলে নিজে থেকে তালিকা থেকে বাদ যান। সাধারণত ৬ মাস।',
+    en: 'How many months after delivery a mother stays in the "Nursing" category and gets cooked meals. Choosing Nursing and the baby\'s age on her form moves her from pregnant to nursing; after this period she drops out automatically. Usually 6 months.',
   },
   data: { bn: 'ডেটা ও ব্যাকআপ', en: 'Data & backup' },
   dataHint: { bn: 'সব তথ্য আপনার অ্যাকাউন্টে নিরাপদে সার্ভারে থাকে — যেকোনো ফোন বা কম্পিউটার থেকে লগইন করে দেখা যাবে। চাইলে ব্যাকআপ ফাইলও রাখতে পারেন।', en: 'Your data is stored in your account on the server — log in from any phone or computer. You can also keep a backup file.' },

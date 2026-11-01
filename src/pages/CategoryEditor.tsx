@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { dataApi } from '../api/data';
-import { ITEM_KEYS, MEAL_TYPES, type Category, type ItemKey, type MealType } from '../db/schema';
+import { ITEM_KEYS, MEAL_TYPES, PURCHASED_ITEM_KEYS, type Category, type ItemKey, type MealType, type PurchasedItemKey } from '../db/schema';
+import { itemCost } from '../domain/calc';
 import { formatMonths } from '../domain/dates';
-import { ITEM_LABEL, MEAL_LABEL } from '../lib/format';
+import { ITEM_LABEL, MEAL_LABEL, rupees } from '../lib/format';
 import { useApp } from '../state/AppDataContext';
 import { Button, Field, NumberInput, Segmented, Select, TextInput, Toggle } from '../components/ui';
 
 const BUILT_IN = new Set(['pregnant', 'nursing']);
+const isPurchased = (item: ItemKey): item is PurchasedItemKey => (PURCHASED_ITEM_KEYS as readonly string[]).includes(item);
 
 /** The ICDS supplementary-nutrition age groups, in months. */
 const AGE_PRESETS: readonly [number, number][] = [
@@ -150,6 +152,11 @@ export function CategoryEditor({ category, isNew, onDone }: { category: Category
                     {MEAL_TYPES.map((m) => (
                       <td key={m} className="px-2 py-1.5">
                         <NumberInput value={c.norms[m][item]} onChange={(v) => setNorm(m, item, v)} className="py-1.5" />
+                        {isPurchased(item) && (
+                          <div className="mt-0.5 text-right text-xs text-slate-500 tabular-nums">
+                            = {rupees(itemCost(item, c.norms[m][item], data.settings.rates))}
+                          </div>
+                        )}
                       </td>
                     ))}
                   </tr>

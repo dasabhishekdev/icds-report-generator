@@ -6,6 +6,7 @@ import {
   type Gender,
   type ItemQuantities,
   type MealType,
+  type PurchasedItemKey,
   type Settings,
 } from '../db/schema';
 import { ageGroupMonths } from './dates';
@@ -105,6 +106,10 @@ export interface DayCosts {
   childPotato: number;
   total: number;
 }
+
+/** Money for one head's quantity of a bought item: eggs by the piece, the rest at the per-kg rate. */
+export const itemCost = (item: PurchasedItemKey, qty: number, rates: Settings['rates']): number =>
+  round2(item === 'egg' ? qty * rates.egg : (qty * rates[item]) / 1000);
 
 export function dayCosts(ration: Ration, rates: Settings['rates']): DayCosts {
   const perGram = (kgRate: number) => kgRate / 1000;
