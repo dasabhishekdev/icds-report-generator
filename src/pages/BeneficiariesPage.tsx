@@ -9,11 +9,14 @@ import { Button, Modal, Segmented, TextInput } from '../components/ui';
 import { BeneficiaryForm } from './BeneficiaryForm';
 
 type Filter = 'all' | 'mother' | 'child';
+/** A category id, every category, or people in none (aged out, no age, left, not yet joined). */
+type CategoryFilter = 'all' | 'none' | (string & {});
 
 export function BeneficiariesPage() {
   const { data, t, lang, label } = useApp();
   const { beneficiaries, categories, settings } = data;
   const [filter, setFilter] = useState<Filter>('all');
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
   const [query, setQuery] = useState('');
   const [editing, setEditing] = useState<{ existing?: Beneficiary; kind: 'child' | 'mother' } | null>(null);
   const [missingDobOnly, setMissingDobOnly] = useState(false);
@@ -21,7 +24,7 @@ export function BeneficiariesPage() {
   const missingDob = useMemo(() => childrenWithoutDob(beneficiaries, today), [beneficiaries, today]);
   const showMissingOnly = missingDobOnly && missingDob.length > 0;
 
-  const rows = useMemo(() => {
+  const matching = useMemo(() => {
     const q = query.trim().toLowerCase();
     return beneficiaries
       .filter((b) => filter === 'all' || b.kind === filter)
@@ -37,6 +40,22 @@ export function BeneficiariesPage() {
         return rank(x) - rank(y) || x.b.name.localeCompare(y.b.name);
       });
   }, [beneficiaries, filter, query, showMissingOnly, categories, settings.nursingMonths, today]);
+
+  const countIn = (id: CategoryFilter) =>
+    id === 'all' ? matching.length : matching.filter((r) => (id === 'none' ? !r.category : r.category?.id === id)).length;
+  const categoryChips: { id: CategoryFilter; text: string }[] = [
+    { id: 'all', text: t('all') },
+    ...[...categories]
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .filter((c) => filter === 'all' || c.group === filter)
+      .map((c) => ({ id: c.id, text: label(c.name) })),
+    ...(countIn('none') > 0 ? [{ id: 'none' as const, text: t('noCategory') }] : []),
+  ];
+  const activeCategory = categoryChips.some((chip) => chip.id === categoryFilter) ? categoryFilter : 'all';
+  const rows =
+    activeCategory === 'all'
+      ? matching
+      : matching.filter((r) => (activeCategory === 'none' ? !r.category : r.category?.id === activeCategory));
 
   const month = monthOf(today);
   const motherDetail = (m: MotherBeneficiary) => {
@@ -102,6 +121,25 @@ export function BeneficiariesPage() {
             { value: 'child', label: t('children') },
           ]}
         />
+      </div>
+
+      <div className="flex flex-wrap gap-2" role="group" aria-label={t('ageCategoryFilter')}>
+        {categoryChips.map((chip) => {
+          const active = chip.id === activeCategory;
+          return (
+            <button
+              key={chip.id}
+              type="button"
+              aria-pressed={active}
+              onClick={() => setCategoryFilter(chip.id)}
+              className={`shrink-0 rounded-full px-3 py-1.5 text-sm font-semibold whitespace-nowrap transition ${
+                active ? 'bg-teal-700 text-white shadow-sm' : 'bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              {chip.text} <span className={active ? 'text-teal-100' : 'text-slate-400'}>({countIn(chip.id)})</span>
+            </button>
+          );
+        })}
       </div>
 
       {rows.length === 0 ? (

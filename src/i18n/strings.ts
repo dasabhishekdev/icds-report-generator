@@ -130,6 +130,8 @@ const strings = {
   category: { bn: 'বিভাগ', en: 'Category' },
   inactive: { bn: 'নিষ্ক্রিয়', en: 'Inactive' },
   agedOut: { bn: 'বয়সসীমা পেরিয়েছে', en: 'Aged out' },
+  noCategory: { bn: 'অন্যান্য (বয়সসীমা পার / বয়স নেই / বাদ)', en: 'Other (aged out, no age, left)' },
+  ageCategoryFilter: { bn: 'বিভাগ অনুযায়ী দেখুন', en: 'Filter by category' },
   exited: { bn: 'বাদ গেছে', en: 'Exited' },
   notServed: { bn: 'খাবার নয়', en: 'Not fed' },
   noBeneficiaries: { bn: 'এখনও কেউ যোগ হয়নি', en: 'No beneficiaries yet' },
