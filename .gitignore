@@ -15,3 +15,8 @@ backups
 # Android signing key and its passwords: never commit
 android/*.keystore
 android/keystore-credentials.txt
+android/.gradle
+android/app/build
+android/build
+android/local.properties
+android/release

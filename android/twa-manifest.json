@@ -1,0 +1,50 @@
+{
+  "packageId": "com.educoreva.icds",
+  "host": "icds.educoreva.com",
+  "name": "ICDS Report Generator",
+  "launcherName": "ICDS Reports",
+  "display": "standalone",
+  "orientation": "default",
+  "themeColor": "#0F766E",
+  "themeColorDark": "#0F766E",
+  "navigationColor": "#0F766E",
+  "navigationColorDark": "#0F766E",
+  "navigationDividerColor": "#0F766E",
+  "navigationDividerColorDark": "#0F766E",
+  "backgroundColor": "#F8FAFC",
+  "enableNotifications": false,
+  "startUrl": "/",
+  "iconUrl": "https://icds.educoreva.com/icon-512.png",
+  "maskableIconUrl": "https://icds.educoreva.com/icon-maskable-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./icds-release.keystore",
+    "alias": "icds"
+  },
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "shortcuts": [
+    {
+      "name": "Jan Andolan photo",
+      "shortName": "Jan Andolan",
+      "url": "/#/jan-andolan",
+      "chosenIconUrl": "https://icds.educoreva.com/icon-192.png"
+    }
+  ],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://icds.educoreva.com/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://icds.educoreva.com/",
+  "minSdkVersion": 24,
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "appVersion": "1.0.0"
+}
