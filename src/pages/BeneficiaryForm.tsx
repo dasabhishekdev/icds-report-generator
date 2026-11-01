@@ -54,8 +54,16 @@ function deriveMother(b: Beneficiary | undefined, month: string): Pick<Draft, 's
   return { stage: 'pregnant', pregnancyMonths: months >= 1 && months <= 9 ? String(months) : '', babyMonths: '0' };
 }
 
+const REGISTER_MONTH_KEY = 'icds-register-month';
+
+/** The register month last chosen, so the form reopens on the sheet being copied from. */
+function lastRegisterMonth(): string {
+  const saved = localStorage.getItem(REGISTER_MONTH_KEY);
+  return saved && /^\d{4}-(0[1-9]|1[0-2])$/.test(saved) ? saved : currentMonth();
+}
+
 function toDraft(b: Beneficiary | undefined, kind: 'child' | 'mother'): Draft {
-  const month = currentMonth();
+  const month = lastRegisterMonth();
   return {
     kind: b?.kind ?? kind,
     name: b?.name ?? '',
@@ -163,13 +171,22 @@ export function BeneficiaryForm({
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setD((prev) => ({ ...prev, [k]: v }));
   const edit = <K extends keyof Draft>(k: K, v: Draft[K], field: keyof Draft['touched']) =>
     setD((prev) => ({ ...prev, [k]: v, touched: { ...prev.touched, [field]: true } }));
-  const setRegisterMonth = (month: string) =>
-    setD((prev) => ({
-      ...prev,
-      registerMonth: month,
-      ...(existing && !prev.touched.age ? deriveAge(existing, month) : {}),
-      ...(existing && !prev.touched.mother ? deriveMother(existing, month) : {}),
-    }));
+  const setRegisterMonth = (month: string) => {
+    localStorage.setItem(REGISTER_MONTH_KEY, month);
+    setD((prev) => {
+      // Someone on a month's register was at the centre that month: joining follows it for new people,
+      // and moves back for existing ones when an earlier register is chosen.
+      const follow = !prev.touched.joined && (!existing || month < prev.joinedMonth);
+      return {
+        ...prev,
+        registerMonth: month,
+        ...(follow ? { joinedMonth: month } : {}),
+        touched: follow && existing ? { ...prev.touched, joined: true } : prev.touched,
+        ...(existing && !prev.touched.age ? deriveAge(existing, month) : {}),
+        ...(existing && !prev.touched.mother ? deriveMother(existing, month) : {}),
+      };
+    });
+  };
   const hasAttendance = existing ? data.days.some((day) => day.presentIds.includes(existing.id)) : false;
   const changed = (field: keyof Draft['touched']) => !existing || d.touched[field];
   const valid = d.name.trim() !== '' && d.joinedMonth !== '' && d.registerMonth !== '';
@@ -330,6 +347,7 @@ export function BeneficiaryForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label={t('enrolledOn')}>
           <MonthSelect value={d.joinedMonth} onChange={(v) => edit('joinedMonth', v, 'joined')} />
+          {d.joinedMonth > d.registerMonth && <p className="mt-1 text-xs font-medium text-amber-700">⚠ {t('joinedAfterRegister')}</p>}
         </Field>
         <Field label={t('exitedOn')} hint={t('exitHint')}>
           <MonthSelect value={d.lastMonth} onChange={(v) => edit('lastMonth', v, 'left')} emptyLabel={t('stillAtCentre')} />

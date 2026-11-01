@@ -110,6 +110,10 @@ const strings = {
   dob: { bn: 'বয়স', en: 'Age' },
   registerMonth: { bn: 'রেজিস্টারের মাস', en: 'Register month' },
   registerMonthHint: { bn: 'বয়স ও মাস এই মাসের রেজিস্টার অনুযায়ী লিখুন', en: "Write ages and months as in this month's register" },
+  joinedAfterRegister: {
+    bn: 'ভর্তির মাস রেজিস্টারের মাসের পরে — ওই মাসের হাজিরায় দেখা যাবে না।',
+    en: "Joined after the register month — they won't appear in that month's attendance.",
+  },
   monthsPregnant: { bn: 'কত মাসের গর্ভবতী', en: 'Months pregnant' },
   babyAge: { bn: 'শিশুর বয়স (মাস)', en: "Baby's age (months)" },
   motherStageHint: { bn: 'প্রসবের পর "প্রসূতি" বেছে শিশুর বয়স দিন', en: 'After delivery choose Nursing and give the baby\'s age' },
