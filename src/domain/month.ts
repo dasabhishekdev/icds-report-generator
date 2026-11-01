@@ -109,6 +109,7 @@ export interface DayRow {
   closing: StockQuantities;
 }
 
+/** A row of the fuel register's item table: the daily fuel bill, or a government supply used. */
 export interface FuelLine {
   id: string;
   name: string;
@@ -116,9 +117,16 @@ export interface FuelLine {
   quantity: number;
   rate: number;
   amount: number;
-  /** Government supply: rate and amount are always 0. */
+  /** Government supply: the quantity used from the stock ledger, with no rate or amount. */
   govSupplied: boolean;
 }
+
+/** Government supplies listed on the printed fuel register, with the stock items they add up. */
+const FUEL_REGISTER_SUPPLIES: { id: string; name: string; unit: string; items: StockItemKey[] }[] = [
+  { id: 'csb', name: 'সি.এস.বি. / চাল / ডাল (CSB / Rice / Dal)', unit: 'Kg', items: ['rice', 'dal'] },
+  { id: 'oil', name: 'স্যাঃ তেল / সঃ তেল (Oil)', unit: 'Lit', items: ['oil'] },
+  { id: 'spices', name: 'হলুদ / লবণ (Turmeric / Salt)', unit: 'Kg', items: ['turmeric', 'salt'] },
+];
 
 export interface ReportPeriod {
   from: string;
@@ -150,7 +158,7 @@ export interface MonthSummary {
   fuel: FuelLine[];
   /** Rs per cooking day × cooking days, shown row by row on the fuel register. */
   fuelDaily: { rate: number; days: number; amount: number };
-  /** Fuel item lines plus the daily amount. */
+  /** The fuel & spice bill: the daily amount (government supplies carry no money). */
   fuelTotal: number;
 }
 
@@ -318,16 +326,21 @@ function openingStockAt(date: string, ctx: Context): StockQuantities {
   return runLedger(buildRows(earlier, ctx), monthOpening);
 }
 
-/** Month overrides (manual fuel quantities) only apply when the period is that whole month. */
-function fuelLines(month: string | null, beneficiaryDays: number, ctx: Context): FuelLine[] {
-  const meta = month ? ctx.data.monthMetas.find((m) => m.month === month) : undefined;
-  return ctx.data.settings.fuelItems.map((item) => {
-    const o = meta?.fuelOverrides?.find((x) => x.fuelItemId === item.id);
-    const quantity = o?.quantity ?? round2(item.qtyPerBeneficiaryDay * beneficiaryDays);
-    const govSupplied = item.govSupplied === true;
-    const rate = govSupplied ? 0 : (o?.rate ?? item.rate);
-    return { id: item.id, name: item.name, unit: item.unit, quantity, rate, amount: round2(quantity * rate), govSupplied };
-  });
+/** The fuel register's item rows: the daily bill, then each government supply used in the period. */
+function fuelLines(rows: readonly DayRow[], daily: MonthSummary['fuelDaily']): FuelLine[] {
+  const used = (item: StockItemKey) => rows.reduce((s, r) => s + r.consumption[item], 0);
+  return [
+    { id: 'fuel', name: 'জ্বালানী ও মশলা (Fuel & Spices)', unit: 'দিন', quantity: daily.days, rate: daily.rate, amount: daily.amount, govSupplied: false },
+    ...FUEL_REGISTER_SUPPLIES.map((supply) => ({
+      id: supply.id,
+      name: supply.name,
+      unit: supply.unit,
+      quantity: round2(supply.items.reduce((s, item) => s + used(item), 0) / 1000),
+      rate: 0,
+      amount: 0,
+      govSupplied: true,
+    })),
+  ];
 }
 
 export function buildMonthSummary(month: string, data: AppData): MonthSummary {
@@ -371,9 +384,9 @@ export function buildPeriodSummary(from: string, to: string, data: AppData): Mon
     chatu: purchaseLine('chatu'),
   };
   const purchaseTotal = round2(purchase.egg.cost + purchase.veg.cost + purchase.potato.cost + purchase.chatu.cost);
-  const fuel = fuelLines(period.fullMonth ? month : null, totals.counts.total, ctx);
   const fuelRate = data.settings.fuelPerCookingDay ?? 0;
   const fuelDaily = { rate: fuelRate, days: served.length, amount: round2(fuelRate * served.length) };
+  const fuel = fuelLines(rows, fuelDaily);
 
   return {
     month,
@@ -395,6 +408,6 @@ export function buildPeriodSummary(from: string, to: string, data: AppData): Mon
     beneficiaryDays: totals.counts.total,
     fuel,
     fuelDaily,
-    fuelTotal: round2(fuel.reduce((s, f) => s + f.amount, 0) + fuelDaily.amount),
+    fuelTotal: fuelDaily.amount,
   };
 }

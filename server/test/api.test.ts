@@ -155,6 +155,8 @@ describe.skipIf(!MONGO_URL)('API', () => {
     expect((await call(cookie, 'PATCH', '/api/settings', { rateGrams: { chatu: 0 } })).statusCode).toBe(400);
     const perKg = (await call(cookie, 'PATCH', '/api/settings', { rates: { egg: 9, veg: 20, potato: 28, chatu: 160 } })).json();
     expect(perKg.rateGrams).toEqual({});
+    const legacyFuel = { fuelItems: [{ id: 'fuel', name: 'Coal', unit: 'Kg', rate: 5, qtyPerBeneficiaryDay: 0 }] };
+    expect((await call(cookie, 'PATCH', '/api/settings', legacyFuel)).statusCode).toBe(200);
 
     const noDob = { id: 'kid-x', kind: 'child', name: 'No DOB', gender: 'F', enrolledOn: '2026-01-01' };
     expect((await call(cookie, 'PUT', '/api/beneficiaries/kid-x', noDob)).statusCode).toBe(200);
@@ -218,12 +220,9 @@ describe.skipIf(!MONGO_URL)('API', () => {
     expect((await c.settings.findOne({ userId: changed }))?.fuelPerCookingDay).toBe(50);
   });
 
-  it('backfills turmeric norms and marks government fuel rows without a rate', async () => {
+  it('backfills turmeric norms without overwriting what users set', async () => {
     const c = collections(client.db(dbName));
     const userId = new ObjectId();
-    const { id: _id, ...settings } = defaultSettings();
-    const legacyItems = settings.fuelItems.map(({ govSupplied: _gov, ...item }) => ({ ...item, rate: item.id === 'oil' ? 120 : 5 }));
-    await c.settings.insertOne({ ...settings, fuelItems: legacyItems, userId });
     const legacy = defaultCategories().map((cat) => {
       const { turmeric: _k, ...khichuri } = cat.norms.khichuri;
       const { turmeric: _r, ...rice } = cat.norms.rice;
@@ -233,14 +232,6 @@ describe.skipIf(!MONGO_URL)('API', () => {
     await backfillDefaultSettings(c);
     const after = await c.categories.find({ userId }).sort({ sortOrder: 1 }).toArray();
     expect(after.map((cat) => [cat.norms.khichuri.turmeric, cat.norms.rice.turmeric])).toEqual([[2, 0.5], [0.5, 0.5], [0, 0], [0.5, 0.5], [0.5, 0.5]]);
-    const items = (await c.settings.findOne({ userId }))!.fuelItems;
-    expect(items.map((i) => [i.id, i.govSupplied ?? false, i.rate])).toEqual([
-      ['fuel', false, 5],
-      ['matchbox', false, 5],
-      ['csb', true, 0],
-      ['oil', true, 0],
-      ['spices', true, 0],
-    ]);
   });
 
   it('imports a backup, protects referenced beneficiaries and resets to defaults', async () => {

@@ -22,7 +22,7 @@ describe('September 2026 reports', () => {
   it('fuel & spices register bills Rs 43.95 per cooking day', () => {
     expect(v(fuel, 'I7')).toBe(43.95);
     expect(fuel.cells.get('I37')).toMatchObject({ value: 1186.65, formula: 'SUM(I7:I36)' });
-    expect(v(fuel, 'A48')).toBe('জ্বালানী ও মশলা বাবদ 1,186 টাকা 65 পয়সা (27 দিন × 43.95 টাকা) প্রকৃতই খরচ করিয়াছি।');
+    expect(v(fuel, 'A47')).toBe('জ্বালানী ও মশলা বাবদ 1,186 টাকা 65 পয়সা (27 দিন × 43.95 টাকা) প্রকৃতই খরচ করিয়াছি।');
   });
 
   it('nutrition voucher matches the submitted voucher', () => {
@@ -84,12 +84,20 @@ describe('September 2026 reports', () => {
     expect(v(stock, 'AH35')).toBe(544.5);
   });
 
-  it('fuel register shows government supplies without a rate or amount', () => {
-    for (const r of [43, 44, 45]) {
-      expect(v(fuel, `D${r}`)).toBe('সরকারি সরবরাহ');
-      expect(v(fuel, `E${r}`)).toBeNull();
-    }
-    expect(v(fuel, 'A43')).toContain('CSB / Rice / Dal');
+  it('fuel register item table is the daily bill and the government supplies used', () => {
+    expect(v(fuel, 'A41')).toBe('জ্বালানী ও মশলা (Fuel & Spices)');
+    expect(v(fuel, 'C41')).toBe('27 দিন');
+    expect(v(fuel, 'D41')).toBe(43.95);
+    expect([v(fuel, 'E41'), v(fuel, 'F41')]).toEqual([1186, 65]);
+    expect([v(fuel, 'A42'), v(fuel, 'C42'), v(fuel, 'D42'), v(fuel, 'E42')]).toEqual([
+      'সি.এস.বি. / চাল / ডাল (CSB / Rice / Dal)',
+      '88.7 Kg',
+      'সরকারি সরবরাহ',
+      null,
+    ]);
+    expect(v(fuel, 'C43')).toBe('2.18 Lit');
+    expect(v(fuel, 'C44')).toBe('2.72 Kg');
+    expect([v(fuel, 'A45'), v(fuel, 'E45'), v(fuel, 'F45')]).toEqual(['মোট (Total)', 1186, 65]);
   });
 
   it('stock register use and balance are quantities in grams, not money', () => {

@@ -6,9 +6,9 @@ import {
   MEAL_TYPES,
   PURCHASED_ITEM_KEYS,
   STATE_HOLIDAY_MODES,
+  STOCK_ITEM_KEYS,
   type Category,
   type CategoryGroup,
-  type FuelItem,
   type MealType,
   type Settings,
   type StateHolidayMode,
@@ -37,15 +37,14 @@ export function ReportSettingsPage() {
   const { t, data } = useApp();
   const [flash, setFlash] = useFlash();
   const saved = (ok: boolean) => ok && setFlash(t('saved'));
-  const { rates, fuelItems, fuelPerCookingDay, nursingMonths, weeklyOffDays } = data.settings;
+  const { rates, rateGrams, fuelPerCookingDay, nursingMonths, weeklyOffDays } = data.settings;
   return (
     <div className="space-y-4">
       <SettingsHeader />
-      <RatesCard key={JSON.stringify(rates)} onSaved={saved} />
+      <ItemsCard key={JSON.stringify([rates, rateGrams, fuelPerCookingDay])} onSaved={saved} />
       <CategoriesCard />
       <NursingPeriodCard key={nursingMonths} onSaved={saved} />
       <HolidaysCard key={weeklyOffDays.join()} onSaved={saved} />
-      <FuelItemsCard key={JSON.stringify([fuelItems, fuelPerCookingDay])} onSaved={saved} />
       <SnpMoneyCard />
       <DefaultsCard onDone={() => setFlash(t('done'))} />
       <Flash message={flash} />
@@ -107,19 +106,23 @@ function NursingPeriodCard({ onSaved }: { onSaved: (ok: boolean) => void }) {
   );
 }
 
-function RatesCard({ onSaved }: { onSaved: (ok: boolean) => void }) {
+/** Every item the registers use, in fixed groups: bought (priced), government supplied (no rate), fuel per day. */
+function ItemsCard({ onSaved }: { onSaved: (ok: boolean) => void }) {
   const { t, data } = useApp();
   const [rates, setRates] = useState(data.settings.rates);
+  const [perDay, setPerDay] = useState(data.settings.fuelPerCookingDay ?? 0);
   const [grams, setGrams] = useState<Record<WeighedItemKey, number | undefined>>(
     () => Object.fromEntries(WEIGHED_ITEM_KEYS.map((item) => [item, rateGramsFor(data.settings, item)])) as Record<WeighedItemKey, number>,
   );
   const valid = WEIGHED_ITEM_KEYS.every((item) => (grams[item] ?? 0) > 0);
   const save = () => {
     const rateGrams = Object.fromEntries(WEIGHED_ITEM_KEYS.map((item) => [item, grams[item]!])) as Record<WeighedItemKey, number>;
-    void saveSettings({ rates, rateGrams }).then(onSaved);
+    void saveSettings({ rates, rateGrams, fuelPerCookingDay: perDay }).then(onSaved);
   };
   return (
-    <Card title={t('rates')} hint={t('hintRates')}>
+    <Card title={t('itemsTitle')} hint={t('itemsHint')}>
+      <h3 className="mb-1 text-xs font-bold tracking-wide text-slate-500 uppercase">{t('boughtItems')}</h3>
+      <p className="mb-3 text-xs text-slate-500">{t('hintRates')}</p>
       <div className="space-y-3">
         <div className="grid grid-cols-[6rem_1fr_auto_1fr] items-center gap-2">
           <span className="font-medium text-slate-700">{t('itemEgg')}</span>
@@ -149,6 +152,24 @@ function RatesCard({ onSaved }: { onSaved: (ok: boolean) => void }) {
           );
         })}
       </div>
+
+      <h3 className="mt-5 mb-1 text-xs font-bold tracking-wide text-slate-500 uppercase">{t('govItems')}</h3>
+      <p className="mb-2 text-xs text-slate-500">{t('govItemsHint')}</p>
+      <div className="flex flex-wrap gap-2">
+        {STOCK_ITEM_KEYS.map((item) => (
+          <span key={item} className="rounded-full bg-slate-100 px-3 py-1 text-sm font-medium text-slate-700">
+            {t(ITEM_LABEL[item])}
+          </span>
+        ))}
+      </div>
+
+      <h3 className="mt-5 mb-1 text-xs font-bold tracking-wide text-slate-500 uppercase">{t('fuelSpicesTitle')}</h3>
+      <div className="max-w-xs">
+        <Field label={t('fuelPerCookingDay')} hint={t('fuelPerCookingDayHint')}>
+          <NumberInput value={perDay} onChange={(v) => setPerDay(v ?? 0)} />
+        </Field>
+      </div>
+
       <Button variant="primary" className="mt-4" disabled={!valid} onClick={save}>
         {t('save')}
       </Button>
@@ -434,77 +455,6 @@ function SnpMoneyCard() {
   return (
     <Card title={t('snpMoneyTitle')}>
       <Toggle checked={data.settings.snpInPaise === true} onChange={(snpInPaise) => void saveSettings({ snpInPaise })} label={t('snpInPaise')} />
-    </Card>
-  );
-}
-
-function FuelItemsCard({ onSaved }: { onSaved: (ok: boolean) => void }) {
-  const { t, data } = useApp();
-  const [items, setItems] = useState<FuelItem[]>(data.settings.fuelItems);
-  const [perDay, setPerDay] = useState(data.settings.fuelPerCookingDay ?? 0);
-  const update = (id: string, patch: Partial<FuelItem>) => setItems(items.map((i) => (i.id === id ? { ...i, ...patch } : i)));
-  return (
-    <Card
-      title={t('fuelItems')}
-      hint={t('fuelHint')}
-      actions={
-        <Button onClick={() => setItems([...items, { id: newId(), name: '', unit: 'Kg', rate: 0, qtyPerBeneficiaryDay: 0 }])}>
-          <Plus size={16} /> {t('addItem')}
-        </Button>
-      }
-    >
-      <div className="mb-4 max-w-xs">
-        <Field label={t('fuelPerCookingDay')} hint={t('fuelPerCookingDayHint')}>
-          <NumberInput value={perDay} onChange={(v) => setPerDay(v ?? 0)} />
-        </Field>
-      </div>
-      <div className="space-y-3">
-        {items.map((item) => (
-          <div key={item.id} className="rounded-xl bg-slate-50 p-3">
-            <div className="flex gap-2">
-              <TextInput value={item.name} placeholder={t('name')} onChange={(e) => update(item.id, { name: e.target.value })} />
-              <button
-                type="button"
-                className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600"
-                aria-label={t('delete')}
-                onClick={() => setItems(items.filter((i) => i.id !== item.id))}
-              >
-                <Trash2 size={18} />
-              </button>
-            </div>
-            <div className="mt-2 grid grid-cols-3 gap-2">
-              <Field label={t('unit')}>
-                <TextInput value={item.unit} onChange={(e) => update(item.id, { unit: e.target.value })} />
-              </Field>
-              <Field label={t('rate')}>
-                <NumberInput
-                  value={item.govSupplied ? undefined : item.rate}
-                  placeholder={item.govSupplied ? t('govSuppliedShort') : undefined}
-                  disabled={item.govSupplied}
-                  onChange={(v) => update(item.id, { rate: v ?? 0 })}
-                />
-              </Field>
-              <Field label={t('perBenDay')}>
-                <NumberInput value={item.qtyPerBeneficiaryDay} onChange={(v) => update(item.id, { qtyPerBeneficiaryDay: v ?? 0 })} />
-              </Field>
-            </div>
-            <div className="mt-2">
-              <Toggle
-                checked={item.govSupplied === true}
-                onChange={(govSupplied) => update(item.id, govSupplied ? { govSupplied, rate: 0 } : { govSupplied })}
-                label={t('govSupplied')}
-              />
-            </div>
-          </div>
-        ))}
-      </div>
-      <Button
-        variant="primary"
-        className="mt-4"
-        onClick={() => void saveSettings({ fuelItems: items.filter((i) => i.name.trim()), fuelPerCookingDay: perDay }).then(onSaved)}
-      >
-        {t('save')}
-      </Button>
     </Card>
   );
 }

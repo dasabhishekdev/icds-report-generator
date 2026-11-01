@@ -17,31 +17,25 @@ export async function seedUser(
 
 /** Gives every account the defaults for settings it does not have yet; values a user has set are kept. */
 export async function backfillDefaultSettings(c: Collections): Promise<void> {
-  const { fuelPerCookingDay, fuelItems } = defaultSettings();
+  const { fuelPerCookingDay } = defaultSettings();
   await c.settings.updateMany({ fuelPerCookingDay: { $exists: false } }, { $set: { fuelPerCookingDay } });
   for (const meal of MEAL_TYPES) {
     const field = `norms.${meal}.turmeric`;
     await c.categories.updateMany({ [field]: { $exists: false }, servesMeal: true }, { $set: { [field]: TURMERIC_PER_HEAD } });
     await c.categories.updateMany({ [field]: { $exists: false } }, { $set: { [field]: 0 } });
   }
-  const govIds = fuelItems.filter((item) => item.govSupplied).map((item) => item.id);
-  await c.settings.updateMany(
-    { fuelItems: { $elemMatch: { id: { $in: govIds }, govSupplied: { $exists: false } } } },
-    { $set: { 'fuelItems.$[gov].govSupplied': true, 'fuelItems.$[gov].rate': 0 } },
-    { arrayFilters: [{ 'gov.id': { $in: govIds }, 'gov.govSupplied': { $exists: false } }] },
-  );
 }
 
 /**
- * Puts the shared setup (rates, categories and norms, fuel items and daily fuel amount, nursing period,
+ * Puts the shared setup (rates, categories and norms, daily fuel amount, nursing period,
  * weekly off, state holiday mode) back to the defaults. Beneficiaries, attendance, stock, month overrides,
  * the centre's own holidays and saved reports are untouched.
  */
 export async function restoreDefaultSetup(c: Collections, userId: ObjectId): Promise<void> {
-  const { rates, rateGrams, nursingMonths, weeklyOffDays, fuelItems, fuelPerCookingDay } = defaultSettings();
+  const { rates, rateGrams, nursingMonths, weeklyOffDays, fuelPerCookingDay } = defaultSettings();
   await c.settings.updateOne(
     { userId },
-    { $set: { rates, rateGrams, nursingMonths, weeklyOffDays, fuelItems, fuelPerCookingDay, stateHolidays: 'all' } },
+    { $set: { rates, rateGrams, nursingMonths, weeklyOffDays, fuelPerCookingDay, stateHolidays: 'all' }, $unset: { fuelItems: '' } },
   );
   await c.categories.deleteMany({ userId });
   await c.categories.insertMany(defaultCategories().map((cat) => ({ ...cat, userId })));

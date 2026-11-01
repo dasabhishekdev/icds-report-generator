@@ -69,13 +69,6 @@ export function defaultSettings(center: Partial<CenterInfo> = {}): Settings {
     rateGrams: { veg: 20.5, potato: 60, chatu: 10.44 },
     nursingMonths: 6,
     weeklyOffDays: [0],
-    fuelItems: [
-      { id: 'fuel', name: 'কয়লা/কাঠ/কেরোসিন তেল (Coal/Wood/Kerosene)', unit: 'Kg', rate: 0, qtyPerBeneficiaryDay: 0 },
-      { id: 'matchbox', name: 'ঘুঁটে / দেশলাই (Cowdung cake / Matchbox)', unit: 'Pcs', rate: 0, qtyPerBeneficiaryDay: 0 },
-      { id: 'csb', name: 'সি.এস.বি. / চাল / ডাল (CSB / Rice / Dal)', unit: 'Kg', rate: 0, qtyPerBeneficiaryDay: 0, govSupplied: true },
-      { id: 'oil', name: 'স্যাঃ তেল / সঃ তেল (Oil)', unit: 'Lit', rate: 0, qtyPerBeneficiaryDay: 0, govSupplied: true },
-      { id: 'spices', name: 'হলুদ / লবণ (Turmeric / Salt)', unit: 'Kg', rate: 0, qtyPerBeneficiaryDay: 0, govSupplied: true },
-    ],
     fuelPerCookingDay: 43.95,
     holidays: [],
     paperSize: 'A4',

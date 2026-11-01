@@ -149,6 +149,7 @@ const settingsFields = {
   rateGrams: z.strictObject({ veg: grams.optional(), potato: grams.optional(), chatu: grams.optional() }).optional(),
   nursingMonths: z.number().int().min(1).max(36),
   weeklyOffDays: z.array(z.number().int().min(0).max(6)).max(7),
+  /** Legacy, ignored. */
   fuelItems: z
     .array(
       z.strictObject({
@@ -160,7 +161,8 @@ const settingsFields = {
         govSupplied: z.boolean().optional(),
       }),
     )
-    .max(50),
+    .max(50)
+    .optional(),
   fuelPerCookingDay: amount.optional(),
   holidays: z.array(z.strictObject({ date: isoDateSchema, name: text(120).min(1) })).max(400),
   stateHolidays: z.enum(STATE_HOLIDAY_MODES).optional(),

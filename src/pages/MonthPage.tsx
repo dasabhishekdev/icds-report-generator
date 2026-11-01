@@ -1,9 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Plus, RotateCcw, Save, Trash2 } from 'lucide-react';
+import { Plus, Save, Trash2 } from 'lucide-react';
 import { dataApi, newId } from '../api/data';
-import { STOCK_ITEM_KEYS, type FuelLineOverride, type StockItemKey } from '../db/schema';
-import { round2 } from '../domain/calc';
+import { STOCK_ITEM_KEYS, type StockItemKey } from '../db/schema';
 import { currentMonth, todayIso, WEEKDAYS_BN, WEEKDAYS_EN, weekday } from '../domain/dates';
 import { buildMonthSummary, openingStockFor, type AppData, type MonthSummary } from '../domain/month';
 import { formatQty, rupees } from '../lib/format';
@@ -271,96 +270,38 @@ function ReceiptsCard({ summary }: { summary: MonthSummary }) {
   );
 }
 
+/** The fuel register's item table: the daily fuel bill and the government supplies used this month. */
 function FuelPanel({ summary }: { summary: MonthSummary }) {
-  const { t, data, label } = useApp();
-  const meta = data.monthMetas.find((m) => m.month === summary.month);
-  const saved = meta?.fuelOverrides ?? [];
-  const [draft, setDraft] = useState<FuelLineOverride[]>(saved);
-  const [flash, setFlash] = useFlash();
-  const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
-
-  const auto = (id: string) => {
-    const item = data.settings.fuelItems.find((f) => f.id === id);
-    return { quantity: round2((item?.qtyPerBeneficiaryDay ?? 0) * summary.beneficiaryDays), rate: item?.rate ?? 0 };
-  };
-  const setLine = (id: string, patch: Omit<FuelLineOverride, 'fuelItemId'> | null) =>
-    setDraft((prev) => {
-      const others = prev.filter((o) => o.fuelItemId !== id);
-      if (!patch) return others;
-      const current = prev.find((o) => o.fuelItemId === id) ?? { fuelItemId: id };
-      return [...others, { ...current, ...patch }];
-    });
-
-  const lines = data.settings.fuelItems.map((item) => {
-    const o = draft.find((x) => x.fuelItemId === item.id);
-    const a = auto(item.id);
-    const quantity = o?.quantity ?? a.quantity;
-    const rate = item.govSupplied ? 0 : (o?.rate ?? a.rate);
-    return { ...item, quantity, rate, amount: round2(quantity * rate), overridden: Boolean(o) };
-  });
-  const daily = summary.fuelDaily;
-  const total = round2(lines.reduce((s, l) => s + l.amount, 0) + daily.amount);
-
-  async function save() {
-    if (await dataApi.saveMonthMeta({ ...(meta ?? { month: summary.month }), fuelOverrides: draft })) setFlash(t('saved'));
-  }
-
+  const { t, label } = useApp();
+  const [bill, ...supplies] = summary.fuel;
   return (
-    <Card title={t('fuelItems')}>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          void save();
-        }}
-      >
-        <p className="mb-3 text-xs text-slate-500">
-          {t('fuelHint')} ({t('beneficiaryDays')}: {summary.beneficiaryDays})
-        </p>
-        <div className="space-y-3">
-          {daily.rate > 0 && (
-            <div className="rounded-xl bg-slate-50 p-3">
-              <div className="mb-2 font-semibold text-slate-800">{t('fuelDailyLine')}</div>
-              <div className="grid grid-cols-3 gap-2">
-                <MiniStat label={t('cookingDays')} value={String(daily.days)} />
-                <MiniStat label={t('rate')} value={rupees(daily.rate)} />
-                <MiniStat label={t('amount')} value={rupees(daily.amount)} />
-              </div>
-            </div>
-          )}
-          {lines.map((line) => (
-            <div key={line.id} className="rounded-xl bg-slate-50 p-3">
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <span className="font-semibold text-slate-800">{label(line.name)}</span>
-                {line.overridden && (
-                  <button type="button" className="flex items-center gap-1 text-xs font-semibold text-teal-700" onClick={() => setLine(line.id, null)}>
-                    <RotateCcw size={14} /> {t('reset')}
-                  </button>
-                )}
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                <Field label={`${t('quantity')} (${line.unit})`}>
-                  <NumberInput value={line.quantity} onChange={(v) => setLine(line.id, { quantity: v ?? 0 })} />
-                </Field>
-                <Field label={t('rate')}>
-                  <NumberInput
-                    value={line.govSupplied ? undefined : line.rate}
-                    placeholder={line.govSupplied ? t('govSuppliedShort') : undefined}
-                    disabled={line.govSupplied}
-                    onChange={(v) => setLine(line.id, { rate: v ?? 0 })}
-                  />
-                </Field>
-                <MiniStat label={t('amount')} value={line.govSupplied ? t('govSuppliedShort') : rupees(line.amount)} />
-              </div>
-            </div>
-          ))}
+    <Card title={t('fuelSpicesTitle')}>
+      <p className="mb-3 text-xs text-slate-500">{t('fuelPanelHint')}</p>
+      <div className="space-y-3">
+        <div className="rounded-xl bg-slate-50 p-3">
+          <div className="mb-2 font-semibold text-slate-800">{t('fuelDailyLine')}</div>
+          <div className="grid grid-cols-3 gap-2">
+            <MiniStat label={t('cookingDays')} value={String(bill.quantity)} />
+            <MiniStat label={t('rate')} value={rupees(bill.rate)} />
+            <MiniStat label={t('amount')} value={rupees(bill.amount)} />
+          </div>
         </div>
-        <div className="mt-3 flex items-center justify-between rounded-xl bg-teal-50 px-3 py-2 font-bold text-teal-900">
-          <span>{t('total')}</span>
-          <span className="tabular-nums">{rupees(total)}</span>
-        </div>
-        <SaveBar dirty={dirty} onCancel={() => setDraft(saved)} />
-      </form>
-      <Flash message={flash} />
+        {supplies.map((line) => (
+          <div key={line.id} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 p-3">
+            <span className="min-w-0">
+              <span className="block font-semibold text-slate-800">{label(line.name)}</span>
+              <span className="text-xs text-slate-500">{t('govSuppliedUsed')}</span>
+            </span>
+            <span className="shrink-0 font-semibold tabular-nums text-slate-900">
+              {line.quantity} {line.unit}
+            </span>
+          </div>
+        ))}
+      </div>
+      <div className="mt-3 flex items-center justify-between rounded-xl bg-teal-50 px-3 py-2 font-bold text-teal-900">
+        <span>{t('total')}</span>
+        <span className="tabular-nums">{rupees(summary.fuelTotal)}</span>
+      </div>
     </Card>
   );
 }

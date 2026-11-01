@@ -90,6 +90,7 @@ export interface StockReceipt {
   note?: string;
 }
 
+/** Fuel register item rows from before they were derived automatically; kept so older data still loads. */
 export interface FuelItem {
   id: string;
   name: string;
@@ -101,6 +102,7 @@ export interface FuelItem {
   govSupplied?: boolean;
 }
 
+/** Legacy per-month fuel item edits; no longer used. */
 export interface FuelLineOverride {
   fuelItemId: string;
   quantity?: number;
@@ -148,7 +150,8 @@ export interface Settings {
   nursingMonths: number;
   /** 0 = Sunday … 6 = Saturday */
   weeklyOffDays: number[];
-  fuelItems: FuelItem[];
+  /** Legacy, ignored: the fuel register's item rows are derived from the daily rate and the stock ledger. */
+  fuelItems?: FuelItem[];
   /** Fuel & spice bill in Rs for every day a meal is cooked. Absent in databases created before it existed. */
   fuelPerCookingDay?: number;
   /** The centre's own holidays; they apply on top of the state calendar. */
