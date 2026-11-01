@@ -5,9 +5,10 @@ export const MEAL_TYPES: readonly MealType[] = ['khichuri', 'rice'];
 export type ItemKey = 'rice' | 'dal' | 'oil' | 'salt' | 'egg' | 'veg' | 'potato' | 'chatu';
 export const ITEM_KEYS: readonly ItemKey[] = ['rice', 'dal', 'oil', 'salt', 'egg', 'veg', 'potato', 'chatu'];
 
-/** Items supplied by the department and tracked in the stock register (grams). */
-export type StockItemKey = 'chatu' | 'rice' | 'dal' | 'oil' | 'salt';
-export const STOCK_ITEM_KEYS: readonly StockItemKey[] = ['chatu', 'rice', 'dal', 'oil', 'salt'];
+/** Items supplied by the department and carried as a balance in the stock register (grams). */
+export type StockItemKey = 'rice' | 'dal' | 'oil' | 'salt';
+export const STOCK_ITEM_KEYS: readonly StockItemKey[] = ['rice', 'dal', 'oil', 'salt'];
+export const isStockItem = (item: string): item is StockItemKey => (STOCK_ITEM_KEYS as readonly string[]).includes(item);
 
 /** Items bought from the shop and paid for through the nutrition voucher. */
 export type PurchasedItemKey = 'egg' | 'veg' | 'potato' | 'chatu';
@@ -141,6 +142,8 @@ export interface Settings {
   /** 0 = Sunday … 6 = Saturday */
   weeklyOffDays: number[];
   fuelItems: FuelItem[];
+  /** Fuel & spice bill in Rs for every day a meal is cooked. Absent in databases created before it existed. */
+  fuelPerCookingDay?: number;
   /** The centre's own holidays; they apply on top of the state calendar. */
   holidays: Holiday[];
   /** Absent means 'all'. */
@@ -149,6 +152,8 @@ export interface Settings {
   openOnStateHolidays?: string[];
   /** Paper for PDF, print and Excel page setup. Absent in databases created before it existed. */
   paperSize?: PaperSize;
+  /** SNP register money as whole paise (18275 for Rs 182.75), as on the printed form. */
+  snpInPaise?: boolean;
 }
 
 export interface BackupFile {

@@ -7,7 +7,7 @@ import { WEEKDAYS_BN, WEEKDAYS_EN, formatMonths, prettyDate, todayIso } from '..
 import { stateHolidayMode, type HolidaySource } from '../../domain/holidays';
 import type { StringKey } from '../../i18n/strings';
 import { useApp } from '../../state/AppDataContext';
-import { Button, Card, Field, Flash, Modal, NumberInput, Segmented, TextInput, useFlash } from '../../components/ui';
+import { Button, Card, Field, Flash, Modal, NumberInput, Segmented, TextInput, Toggle, useFlash } from '../../components/ui';
 import { CategoryEditor } from '../CategoryEditor';
 import { SettingsHeader } from './SettingsHeader';
 
@@ -18,7 +18,7 @@ export function ReportSettingsPage() {
   const { t, data } = useApp();
   const [flash, setFlash] = useFlash();
   const saved = (ok: boolean) => ok && setFlash(t('saved'));
-  const { rates, fuelItems, nursingMonths, weeklyOffDays } = data.settings;
+  const { rates, fuelItems, fuelPerCookingDay, nursingMonths, weeklyOffDays } = data.settings;
   return (
     <div className="space-y-4">
       <SettingsHeader />
@@ -26,7 +26,8 @@ export function ReportSettingsPage() {
       <CategoriesCard />
       <NursingPeriodCard key={nursingMonths} onSaved={saved} />
       <HolidaysCard key={weeklyOffDays.join()} onSaved={saved} />
-      <FuelItemsCard key={JSON.stringify(fuelItems)} onSaved={saved} />
+      <FuelItemsCard key={JSON.stringify([fuelItems, fuelPerCookingDay])} onSaved={saved} />
+      <SnpMoneyCard />
       <DefaultsCard onDone={() => setFlash(t('done'))} />
       <Flash message={flash} />
     </div>
@@ -364,9 +365,19 @@ function StateCalendarSection() {
   );
 }
 
+function SnpMoneyCard() {
+  const { t, data } = useApp();
+  return (
+    <Card title={t('snpMoneyTitle')}>
+      <Toggle checked={data.settings.snpInPaise === true} onChange={(snpInPaise) => void saveSettings({ snpInPaise })} label={t('snpInPaise')} />
+    </Card>
+  );
+}
+
 function FuelItemsCard({ onSaved }: { onSaved: (ok: boolean) => void }) {
   const { t, data } = useApp();
   const [items, setItems] = useState<FuelItem[]>(data.settings.fuelItems);
+  const [perDay, setPerDay] = useState(data.settings.fuelPerCookingDay ?? 0);
   const update = (id: string, patch: Partial<FuelItem>) => setItems(items.map((i) => (i.id === id ? { ...i, ...patch } : i)));
   return (
     <Card
@@ -378,6 +389,11 @@ function FuelItemsCard({ onSaved }: { onSaved: (ok: boolean) => void }) {
         </Button>
       }
     >
+      <div className="mb-4 max-w-xs">
+        <Field label={t('fuelPerCookingDay')} hint={t('fuelPerCookingDayHint')}>
+          <NumberInput value={perDay} onChange={(v) => setPerDay(v ?? 0)} />
+        </Field>
+      </div>
       <div className="space-y-3">
         {items.map((item) => (
           <div key={item.id} className="rounded-xl bg-slate-50 p-3">
@@ -406,7 +422,11 @@ function FuelItemsCard({ onSaved }: { onSaved: (ok: boolean) => void }) {
           </div>
         ))}
       </div>
-      <Button variant="primary" className="mt-4" onClick={() => void saveSettings({ fuelItems: items.filter((i) => i.name.trim()) }).then(onSaved)}>
+      <Button
+        variant="primary"
+        className="mt-4"
+        onClick={() => void saveSettings({ fuelItems: items.filter((i) => i.name.trim()), fuelPerCookingDay: perDay }).then(onSaved)}
+      >
         {t('save')}
       </Button>
     </Card>

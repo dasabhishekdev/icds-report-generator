@@ -39,6 +39,15 @@ const SEPTEMBER_2026: [number, 'K' | 'R', ...number[]][] = [
 /** Birth dates that keep each child inside its age band for the whole of September 2026. */
 const BAND_DOB = ['2026-01-15', '2025-03-15', '2024-03-15', '2022-03-15', '2021-01-15'];
 
+/** Children on the register per band as [boys, girls]; three 5–6 year olds never came in September. */
+const ENROLLED: [number, number][] = [
+  [2, 2],
+  [3, 4],
+  [2, 3],
+  [5, 8],
+  [6, 6],
+];
+
 const BOY_NAMES = ['Rahul', 'Sourav', 'Arijit', 'Tanmoy', 'Ritam', 'Subho', 'Ayan', 'Rohan', 'Debjit', 'Pritam', 'Sayan', 'Rajib', 'Bapi', 'Niloy', 'Amit', 'Joy'];
 const GIRL_NAMES = ['Puja', 'Riya', 'Mitali', 'Payel', 'Ankita', 'Sneha', 'Tania', 'Moumita', 'Rupa', 'Priya', 'Soma', 'Jhuma', 'Keya', 'Rimpa', 'Barsha', 'Dipa', 'Lipika', 'Mou', 'Sathi', 'Tumpa', 'Nupur', 'Shreya'];
 
@@ -63,14 +72,15 @@ export function sampleData(): AppData {
     return id;
   });
 
-  // Pool of children per [band][gender] sized to the busiest day.
+  // Pool of children per [band][gender]; attendance takes the first N of each pool.
   const pool: string[][][] = BAND_DOB.map(() => [[], []]);
   let boy = 0;
   let girl = 0;
   BAND_DOB.forEach((dob, band) => {
     (['M', 'F'] as Gender[]).forEach((gender, g) => {
-      const max = Math.max(...SEPTEMBER_2026.map((row) => row[4 + band * 2 + g] as number));
-      for (let k = 0; k < max; k++) {
+      const busiest = Math.max(...SEPTEMBER_2026.map((row) => row[4 + band * 2 + g] as number));
+      const size = Math.max(busiest, ENROLLED[band][g]);
+      for (let k = 0; k < size; k++) {
         const name = gender === 'M' ? BOY_NAMES[boy++ % BOY_NAMES.length] : GIRL_NAMES[girl++ % GIRL_NAMES.length];
         const child: ChildBeneficiary = {
           id: `demo-c-${band}-${gender}-${k}`,
@@ -104,12 +114,9 @@ export function sampleData(): AppData {
     { id: 'demo-r-1', date: '2026-09-16', item: 'dal', quantity: 30000, challanNo: '1429' },
     { id: 'demo-r-2', date: '2026-09-16', item: 'oil', quantity: 3000, challanNo: '1429' },
     { id: 'demo-r-3', date: '2026-09-16', item: 'salt', quantity: 3000, challanNo: '1429' },
-    { id: 'demo-r-4', date: '2026-09-01', item: 'chatu', quantity: 10000, challanNo: '1388' },
   ];
 
-  const monthMetas: MonthMeta[] = [
-    { month: '2026-09', openingStock: { chatu: 0, rice: 339030, dal: 12780, oil: 4894, salt: 5254 } },
-  ];
+  const monthMetas: MonthMeta[] = [{ month: '2026-09', openingStock: { rice: 339030, dal: 12780, oil: 4894, salt: 5254 } }];
 
   return { settings, categories: defaultCategories(), beneficiaries, days, receipts, monthMetas };
 }

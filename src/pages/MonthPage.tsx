@@ -298,7 +298,8 @@ function FuelPanel({ summary }: { summary: MonthSummary }) {
     const rate = o?.rate ?? a.rate;
     return { ...item, quantity, rate, amount: round2(quantity * rate), overridden: Boolean(o) };
   });
-  const total = round2(lines.reduce((s, l) => s + l.amount, 0));
+  const daily = summary.fuelDaily;
+  const total = round2(lines.reduce((s, l) => s + l.amount, 0) + daily.amount);
 
   async function save() {
     if (await dataApi.saveMonthMeta({ ...(meta ?? { month: summary.month }), fuelOverrides: draft })) setFlash(t('saved'));
@@ -316,6 +317,16 @@ function FuelPanel({ summary }: { summary: MonthSummary }) {
           {t('fuelHint')} ({t('beneficiaryDays')}: {summary.beneficiaryDays})
         </p>
         <div className="space-y-3">
+          {daily.rate > 0 && (
+            <div className="rounded-xl bg-slate-50 p-3">
+              <div className="mb-2 font-semibold text-slate-800">{t('fuelDailyLine')}</div>
+              <div className="grid grid-cols-3 gap-2">
+                <MiniStat label={t('cookingDays')} value={String(daily.days)} />
+                <MiniStat label={t('rate')} value={rupees(daily.rate)} />
+                <MiniStat label={t('amount')} value={rupees(daily.amount)} />
+              </div>
+            </div>
+          )}
           {lines.map((line) => (
             <div key={line.id} className="rounded-xl bg-slate-50 p-3">
               <div className="mb-2 flex items-center justify-between gap-2">

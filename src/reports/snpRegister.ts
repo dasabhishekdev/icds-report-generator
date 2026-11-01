@@ -1,7 +1,7 @@
 import type { Settings } from '../db/schema';
 import type { MonthSummary } from '../domain/month';
-import { dayLabel, holidayText, inr, mealLabel, periodCaption, periodLabel, periodSlug, splitRupees } from './common';
-import { blankZero, S, SheetBuilder, zebra, type SheetModel } from './sheet';
+import { dayLabel, holidayText, inr, mealLabel, periodCaption, periodLabel, periodSlug, takaPaisa } from './common';
+import { blankZero, S, SheetBuilder, zebra, type CellStyle, type SheetModel } from './sheet';
 import { REPORT_TITLES } from './titles';
 
 export function buildSnpRegister(summary: MonthSummary, settings: Settings): SheetModel {
@@ -26,10 +26,15 @@ export function buildSnpRegister(summary: MonthSummary, settings: Settings): She
     S.infoCenter,
   ).height(2, 22);
 
+  const inPaise = settings.snpInPaise === true;
+  const cash = (rs: number) => (inPaise ? Math.round(rs * 100) : rs);
+  const cashStyle = (style: CellStyle): CellStyle => (inPaise ? { ...style, numFmt: '0' } : style);
+  const unit = inPaise ? 'পঃ' : 'টাকা';
+
   const headers = [
     'তারিখ\n(Date)', 'খাবার\n(Meal)', 'মা: গর্ভবতী\n(Col 1)', 'মা: প্রসূতি\n(Col 2)', 'মোট মা\n(Col 3)',
-    'সবজি (টাকা)\n(Col 4)', 'আলু (টাকা)\n(Col 5)', 'ছাতু (টাকা)\n(Col 6)', 'শিশু\n(Col 7a)', 'মোট শিশু ও মা\n(Col 7b)',
-    'ডিম: মা ও শিশুর\n(Col 8 - পঃ)', 'সবজি\n(Col 9 - পঃ)', 'আলু\n(Col 10 - পঃ)', 'সোয়াবিন/ফল/ছাতু\n(Col 11-13)', 'সর্বমোট খরচ\n(Col 14 - পঃ)',
+    `সবজি (${unit})\n(Col 4)`, `আলু (${unit})\n(Col 5)`, `ছাতু (${unit})\n(Col 6)`, 'শিশু\n(Col 7a)', 'মোট শিশু ও মা\n(Col 7b)',
+    `ডিম: মা ও শিশুর\n(Col 8 - ${unit})`, `সবজি\n(Col 9 - ${unit})`, `আলু\n(Col 10 - ${unit})`, 'সোয়াবিন/ফল/ছাতু\n(Col 11-13)', `সর্বমোট খরচ\n(Col 14 - ${unit})`,
   ];
   headers.forEach((h, i) => b.set(`${'ABCDEFGHIJKLMNO'[i]}4`, h, S.header));
   b.height(4, 30);
@@ -45,8 +50,8 @@ export function buildSnpRegister(summary: MonthSummary, settings: Settings): She
     }
     const cell = zebra(S.cell, i);
     const bold = zebra(S.cellBold, i);
-    const money = zebra(S.money, i);
-    const moneyBold = zebra(S.moneyBold, i);
+    const money = cashStyle(zebra(S.money, i));
+    const moneyBold = cashStyle(zebra(S.moneyBold, i));
     b.set(`A${r}`, dayLabel(row, summary), cell);
     if (!row.served) {
       for (const col of 'BCDEFGHIJKLMNO') b.set(`${col}${r}`, null, cell);
@@ -58,16 +63,16 @@ export function buildSnpRegister(summary: MonthSummary, settings: Settings): She
       .set(`C${r}`, k.pregnant, cell)
       .set(`D${r}`, k.nursing, cell)
       .set(`E${r}`, k.mothers, bold, `C${r}+D${r}`)
-      .set(`F${r}`, blankZero(x.motherVeg), money)
-      .set(`G${r}`, blankZero(x.motherPotato), money)
-      .set(`H${r}`, blankZero(x.chatu), money)
+      .set(`F${r}`, blankZero(cash(x.motherVeg)), money)
+      .set(`G${r}`, blankZero(cash(x.motherPotato)), money)
+      .set(`H${r}`, blankZero(cash(x.chatu)), money)
       .set(`I${r}`, k.children, cell)
       .set(`J${r}`, k.total, bold, `E${r}+I${r}`)
-      .set(`K${r}`, blankZero(x.egg), money)
-      .set(`L${r}`, blankZero(x.childVeg), money)
-      .set(`M${r}`, blankZero(x.childPotato), money)
+      .set(`K${r}`, blankZero(cash(x.egg)), money)
+      .set(`L${r}`, blankZero(cash(x.childVeg)), money)
+      .set(`M${r}`, blankZero(cash(x.childPotato)), money)
       .set(`N${r}`, null, cell)
-      .set(`O${r}`, x.total, moneyBold, `SUM(F${r}:H${r})+SUM(K${r}:M${r})`);
+      .set(`O${r}`, cash(x.total), moneyBold, `SUM(F${r}:H${r})+SUM(K${r}:M${r})`);
   });
 
   const last = first + summary.rows.length - 1;
@@ -75,27 +80,27 @@ export function buildSnpRegister(summary: MonthSummary, settings: Settings): She
   const tc = summary.totals.counts;
   const tx = summary.totals.costs;
   const sum = (col: string) => `SUM(${col}${first}:${col}${last})`;
+  const totalMoney = cashStyle(S.totalMoney);
   b.set(`A${t}`, 'সর্বমোট', S.total)
     .set(`B${t}`, `${summary.servedDays} দিন`, S.total)
     .set(`C${t}`, tc.pregnant, S.total, sum('C'))
     .set(`D${t}`, tc.nursing, S.total, sum('D'))
     .set(`E${t}`, tc.mothers, S.total, sum('E'))
-    .set(`F${t}`, tx.motherVeg, S.totalMoney, sum('F'))
-    .set(`G${t}`, tx.motherPotato, S.totalMoney, sum('G'))
-    .set(`H${t}`, tx.chatu, S.totalMoney, sum('H'))
+    .set(`F${t}`, cash(tx.motherVeg), totalMoney, sum('F'))
+    .set(`G${t}`, cash(tx.motherPotato), totalMoney, sum('G'))
+    .set(`H${t}`, cash(tx.chatu), totalMoney, sum('H'))
     .set(`I${t}`, tc.children, S.total, sum('I'))
     .set(`J${t}`, tc.total, S.total, sum('J'))
-    .set(`K${t}`, tx.egg, S.totalMoney, sum('K'))
-    .set(`L${t}`, tx.childVeg, S.totalMoney, sum('L'))
-    .set(`M${t}`, tx.childPotato, S.totalMoney, sum('M'))
+    .set(`K${t}`, cash(tx.egg), totalMoney, sum('K'))
+    .set(`L${t}`, cash(tx.childVeg), totalMoney, sum('L'))
+    .set(`M${t}`, cash(tx.childPotato), totalMoney, sum('M'))
     .set(`N${t}`, null, S.total)
-    .set(`O${t}`, tx.total, S.totalMoney, sum('O'))
+    .set(`O${t}`, cash(tx.total), totalMoney, sum('O'))
     .height(t, 24);
 
-  const { rupees, paise } = splitRupees(tx.total);
   b.mergeSet(
     `A${t + 2}:O${t + 2}`,
-    `সবজি ও ডিম বাবদ মোট ${inr(rupees, 0)} টাকা ${paise} পয়সা (Rupees ${inr(Math.ceil(tx.total))} মেটানো যেতে পারে) | দোকানদার: ${c.vegShopkeeper} | কর্মী: ${c.workerName}`,
+    `সবজি ও ডিম বাবদ মোট ${takaPaisa(tx.total)} (Rupees ${inr(Math.ceil(tx.total))} মেটানো যেতে পারে) | দোকানদার: ${c.vegShopkeeper} | কর্মী: ${c.workerName}`,
     S.footer,
   ).height(t + 2, 22);
   return b.build();

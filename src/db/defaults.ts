@@ -72,6 +72,7 @@ export function defaultSettings(center: Partial<CenterInfo> = {}): Settings {
       { id: 'oil', name: 'স্যাঃ তেল / সঃ তেল (Oil)', unit: 'Lit', rate: 0, qtyPerBeneficiaryDay: 0 },
       { id: 'spices', name: 'হলুদ / লবণ (Turmeric / Salt)', unit: 'Kg', rate: 0, qtyPerBeneficiaryDay: 0 },
     ],
+    fuelPerCookingDay: 43.95,
     holidays: [],
     paperSize: 'A4',
   };

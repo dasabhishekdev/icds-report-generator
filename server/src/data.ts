@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { ObjectId } from 'mongodb';
-import type { Settings } from '../../src/db/schema';
+import { STOCK_ITEM_KEYS, type Settings } from '../../src/db/schema';
 import type { AppData } from '../../src/domain/month';
 import type { Collections } from './db';
 import type { HolidayService } from './holidays/service';
@@ -49,7 +49,7 @@ export async function loadUserData(
     c.categories.find({ userId }, HIDDEN).sort({ sortOrder: 1 }).toArray(),
     c.beneficiaries.find({ userId }, HIDDEN).toArray(),
     c.days.find({ userId }, HIDDEN).sort({ date: 1 }).toArray(),
-    c.receipts.find({ userId }, HIDDEN).sort({ date: 1 }).toArray(),
+    c.receipts.find({ userId, item: { $in: [...STOCK_ITEM_KEYS] } }, HIDDEN).sort({ date: 1 }).toArray(),
     c.monthMetas.find({ userId }, HIDDEN).toArray(),
   ]);
   if (!settings) throw new Error('Account has no settings');
@@ -181,7 +181,11 @@ export function registerDataRoutes(app: FastifyInstance, c: Collections, holiday
     const userId = uid(request);
     const current = await c.settings.findOne({ userId });
     await wipe(c, userId);
-    await seedUser(c, userId, current?.center ?? {}, { language: current?.language, paperSize: current?.paperSize });
+    await seedUser(c, userId, current?.center ?? {}, {
+      language: current?.language,
+      paperSize: current?.paperSize,
+      snpInPaise: current?.snpInPaise,
+    });
     return loadUserData(c, holidays, userId);
   });
 }

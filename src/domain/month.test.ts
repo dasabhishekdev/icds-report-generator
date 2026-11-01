@@ -40,7 +40,27 @@ describe('September 2026 sample (AWC 547)', () => {
     expect(summary.rows[0].consumption).toMatchObject({ rice: 3000, dal: 1200, oil: 80, salt: 80 });
     expect(summary.rows[1].consumption).toMatchObject({ rice: 2180, dal: 0 });
     expect(summary.rows[15].closing.dal).toBe(34410);
-    expect(summary.closing).toMatchObject({ rice: 267310, dal: 25800, oil: 5716, salt: 6076 });
+    expect(summary.closing).toEqual({ rice: 267310, dal: 25800, oil: 5716, salt: 6076 });
+  });
+
+  it('keeps chatu out of the stock ledger because it is bought', () => {
+    expect(summary.rows[1].consumption).not.toHaveProperty('chatu');
+    const legacy = sampleData();
+    legacy.receipts.push({ id: 'old-chatu', date: '2026-09-01', item: 'chatu' as never, quantity: 10000 });
+    const withLegacy = buildMonthSummary('2026-09', legacy);
+    expect(withLegacy.closing).toEqual(summary.closing);
+    expect(withLegacy.receipts).toHaveLength(3);
+  });
+
+  it('counts everyone on the register, including children who never came', () => {
+    expect(summary.enrolled).toEqual({ pregnant: 3, nursing: 2, childUnder3: 16, child3to6: 25 });
+  });
+
+  it('bills fuel per cooking day like the fuel register', () => {
+    expect(summary.rows[0].fuel).toBe(43.95);
+    expect(summary.rows[5].fuel).toBe(0);
+    expect(summary.fuelDaily).toEqual({ rate: 43.95, days: 27, amount: 1186.65 });
+    expect(summary.fuelTotal).toBe(1186.65);
   });
 
   it('marks Sundays as holidays', () => {

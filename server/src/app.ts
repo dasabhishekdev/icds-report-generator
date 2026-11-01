@@ -14,6 +14,7 @@ import { embeddedFontCss } from './reports/fonts';
 import { createPdfRenderer, findChrome } from './reports/pdf';
 import { registerReportRoutes, type ReportServices } from './reports/routes';
 import { diskStorage, s3Storage } from './reports/storage';
+import { backfillDefaultSettings } from './seed';
 
 function defaultReportServices(config: Config): ReportServices {
   const chrome = findChrome(config.chromePath);
@@ -33,6 +34,7 @@ export async function buildApp(
   const app = Fastify({ logger: options.logger ?? false, bodyLimit: 10 * 1024 * 1024, trustProxy: true });
   const c = collections(db);
   await ensureIndexes(c);
+  await backfillDefaultSettings(c);
   const reports = options.reports ?? defaultReportServices(config);
   const holidays =
     options.holidays ??

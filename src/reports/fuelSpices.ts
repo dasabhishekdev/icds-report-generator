@@ -1,6 +1,6 @@
 import type { Settings } from '../db/schema';
 import type { MonthSummary } from '../domain/month';
-import { dayLabel, holidayText, periodCaption, periodLabel, periodSlug, splitRupees } from './common';
+import { dayLabel, holidayText, inr, periodCaption, periodLabel, periodSlug, splitRupees, takaPaisa } from './common';
 import { blankZero, S, SheetBuilder, zebra, type SheetModel } from './sheet';
 import { REPORT_TITLES } from './titles';
 
@@ -64,12 +64,13 @@ export function buildFuelSpices(summary: MonthSummary, settings: Settings): Shee
       .set(`F${r}`, null, cell)
       .set(`G${r}`, blankZero(k.child3to6), cell)
       .set(`H${r}`, k.total, bold, `D${r}+SUM(E${r}:G${r})`)
-      .set(`I${r}`, null, zebra(S.text, i));
+      .set(`I${r}`, blankZero(row.fuel), zebra(S.money, i));
   });
 
   const last = first + summary.rows.length - 1;
   const t = first + summary.rows.length;
   const tc = summary.totals.counts;
+  const daily = summary.fuelDaily;
   b.set(`A${t}`, 'মোট (Total)', S.total)
     .set(`B${t}`, tc.pregnant, S.total, `SUM(B${first}:B${last})`)
     .set(`C${t}`, tc.nursing, S.total, `SUM(C${first}:C${last})`)
@@ -78,8 +79,9 @@ export function buildFuelSpices(summary: MonthSummary, settings: Settings): Shee
     .set(`F${t}`, null, S.total)
     .set(`G${t}`, tc.child3to6, S.total, `SUM(G${first}:G${last})`)
     .set(`H${t}`, tc.total, S.total, `SUM(H${first}:H${last})`)
-    .set(`I${t}`, `${summary.servedDays} Working Days`, S.total)
     .height(t, 22);
+  if (daily.amount) b.set(`I${t}`, daily.amount, S.totalMoney, `SUM(I${first}:I${last})`);
+  else b.set(`I${t}`, `${summary.servedDays} Working Days`, S.total);
 
   const s = t + 2;
   b.mergeSet(`A${s}:I${s}`, 'দ্রব্যের বিবরণ ও স্বাক্ষর (Commodity Breakdown & Signatories)', S.section);
@@ -102,13 +104,18 @@ export function buildFuelSpices(summary: MonthSummary, settings: Settings): Shee
       .height(r, 30);
   });
   const ft = h + 1 + summary.fuel.length;
-  const total = splitRupees(summary.fuelTotal);
+  const itemsTotal = summary.fuel.reduce((s, line) => s + line.amount, 0);
+  const total = splitRupees(itemsTotal);
   b.mergeSet(`A${ft}:B${ft}`, 'মোট (Total)', { ...S.text, bold: true })
     .set(`C${ft}`, null, S.cell)
     .set(`D${ft}`, null, S.cell)
-    .set(`E${ft}`, summary.fuelTotal ? total.rupees : null, S.cellBold)
-    .set(`F${ft}`, summary.fuelTotal ? total.paise : null, S.cellBold)
+    .set(`E${ft}`, itemsTotal ? total.rupees : null, S.cellBold)
+    .set(`F${ft}`, itemsTotal ? total.paise : null, S.cellBold)
     .height(ft, 22);
+  if (summary.fuelTotal) {
+    const perDay = daily.amount ? ` (${daily.days} দিন × ${inr(daily.rate)} টাকা)` : '';
+    b.mergeSet(`A${ft + 2}:I${ft + 2}`, `জ্বালানী ও মশলা বাবদ ${takaPaisa(summary.fuelTotal)}${perDay} প্রকৃতই খরচ করিয়াছি।`, S.footer).height(ft + 2, 22);
+  }
 
   const signature = { ...S.label, wrap: true };
   b.mergeSet(`G${h + 1}:I${h + 1}`, `দোকানদারের স্বাক্ষর (Shopkeeper):\n${c.fuelShopkeeper}`, signature)

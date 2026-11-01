@@ -1,10 +1,13 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { FastifyInstance, LightMyRequestResponse } from 'fastify';
-import { MongoClient } from 'mongodb';
+import { MongoClient, ObjectId } from 'mongodb';
+import { defaultSettings } from '../../src/db/defaults';
 import { sampleData } from '../../src/db/sampleData';
 import type { BackupFile } from '../../src/db/schema';
 import { buildApp } from '../src/app';
 import { SESSION_COOKIE } from '../src/auth';
+import { collections } from '../src/db';
+import { backfillDefaultSettings } from '../src/seed';
 import { diskStorage } from '../src/reports/storage';
 
 const MONGO_URL = process.env.MONGO_URL;
@@ -167,6 +170,8 @@ describe.skipIf(!MONGO_URL)('API', () => {
       weeklyOffDays: [0, 6],
       stateHolidays: 'off',
       holidays: [holiday],
+      fuelPerCookingDay: 50,
+      snpInPaise: true,
     });
     const custom = (await call(cookie, 'GET', '/api/data')).json().categories[3];
     await call(cookie, 'PUT', `/api/categories/${custom.id}`, { ...custom, norms: { ...custom.norms, rice: { ...custom.norms.rice, rice: 999 } } });
@@ -175,13 +180,34 @@ describe.skipIf(!MONGO_URL)('API', () => {
     const res = await call(cookie, 'POST', '/api/defaults');
     expect(res.statusCode).toBe(200);
     const data = res.json();
-    expect(data.settings).toMatchObject({ rates: { egg: 8.5, veg: 20, potato: 28, chatu: 167 }, weeklyOffDays: [0], stateHolidays: 'all' });
+    expect(data.settings).toMatchObject({
+      rates: { egg: 8.5, veg: 20, potato: 28, chatu: 167 },
+      weeklyOffDays: [0],
+      stateHolidays: 'all',
+      fuelPerCookingDay: 43.95,
+      snpInPaise: true,
+    });
     expect(data.settings.center).toMatchObject({ name: 'Own Centre', number: '42' });
     expect(data.settings.holidays).toEqual([holiday]);
     expect(data.categories.map((c: { id: string }) => c.id)).toEqual(['pregnant', 'nursing', 'child-0-6m', 'child-6m-3y', 'child-3y-6y']);
     expect(data.categories[3].norms.rice.rice).toBe(50);
     expect(data.beneficiaries).toEqual([child]);
     expect(data.days).toEqual([day]);
+  });
+
+  it('backfills missing default settings without overwriting what users set', async () => {
+    const c = collections(client.db(dbName));
+    const older = new ObjectId();
+    const changed = new ObjectId();
+    const { id: _id, ...settings } = defaultSettings();
+    const { fuelPerCookingDay: _fuel, ...withoutFuel } = settings;
+    await c.settings.insertMany([
+      { ...withoutFuel, userId: older },
+      { ...settings, fuelPerCookingDay: 50, userId: changed },
+    ]);
+    await backfillDefaultSettings(c);
+    expect((await c.settings.findOne({ userId: older }))?.fuelPerCookingDay).toBe(43.95);
+    expect((await c.settings.findOne({ userId: changed }))?.fuelPerCookingDay).toBe(50);
   });
 
   it('imports a backup, protects referenced beneficiaries and resets to defaults', async () => {
@@ -197,10 +223,28 @@ describe.skipIf(!MONGO_URL)('API', () => {
     expect((await call(cookie, 'DELETE', `/api/beneficiaries/${used}`)).statusCode).toBe(409);
     expect((await call(cookie, 'DELETE', '/api/categories/pregnant')).statusCode).toBe(400);
 
-    await call(cookie, 'PATCH', '/api/settings', { center: { ...sample.settings.center, name: 'Renamed' } });
+    // Chatu is bought: chatu stock from older backups, clients or stored records is accepted and dropped.
+    const chatuReceipt = { id: 'old-chatu', date: '2026-09-01', item: 'chatu', quantity: 10000, challanNo: '1388' };
+    const older = await call(cookie, 'POST', '/api/import', {
+      ...backup,
+      receipts: [...sample.receipts, chatuReceipt],
+      monthMetas: [{ month: '2026-09', openingStock: { chatu: 0, rice: 339030, dal: 12780, oil: 4894, salt: 5254 } }],
+    });
+    expect(older.statusCode).toBe(200);
+    expect(older.json().receipts.map((r: { item: string }) => r.item)).toEqual(['dal', 'oil', 'salt']);
+    expect(older.json().monthMetas[0].openingStock).toEqual({ rice: 339030, dal: 12780, oil: 4894, salt: 5254 });
+    expect((await call(cookie, 'PUT', '/api/receipts/new-chatu', { ...chatuReceipt, id: 'new-chatu' })).statusCode).toBe(400);
+    const meta = await call(cookie, 'PUT', '/api/month-metas/2026-10', { month: '2026-10', openingStock: { chatu: 5, rice: 1 } });
+    expect(meta.json().openingStock).toEqual({ rice: 1 });
+    const user = await client.db(dbName).collection('users').findOne({ login: 'import@test.in' });
+    await client.db(dbName).collection('receipts').insertOne({ ...chatuReceipt, userId: user!._id });
+    expect((await call(cookie, 'GET', '/api/data')).json().receipts).toHaveLength(3);
+
+    await call(cookie, 'PATCH', '/api/settings', { center: { ...sample.settings.center, name: 'Renamed' }, snpInPaise: true });
     const reset = (await call(cookie, 'POST', '/api/reset')).json();
     expect(reset.days).toEqual([]);
     expect(reset.categories).toHaveLength(5);
     expect(reset.settings.center.name).toBe('Renamed');
+    expect(reset.settings).toMatchObject({ snpInPaise: true, fuelPerCookingDay: 43.95 });
   });
 });

@@ -48,7 +48,6 @@ export function dayLabel(row: DayRow, summary: MonthSummary): number | string {
 }
 
 export const STOCK_LABEL: Record<StockItemKey, string> = {
-  chatu: 'ছাতু',
   rice: 'চাল',
   dal: 'ডাল',
   oil: 'তেল',
@@ -56,7 +55,6 @@ export const STOCK_LABEL: Record<StockItemKey, string> = {
 };
 
 export const STOCK_LABEL_EN: Record<StockItemKey, string> = {
-  chatu: 'Chatu',
   rice: 'Rice',
   dal: 'Dal',
   oil: 'Oil',
@@ -75,4 +73,10 @@ export const trimNum = (n: number) => Number(n.toFixed(3)).toString();
 export function splitRupees(amount: number): { rupees: number; paise: number } {
   const paiseTotal = Math.round(amount * 100);
   return { rupees: Math.floor(paiseTotal / 100), paise: paiseTotal % 100 };
+}
+
+/** "1186 টাকা 65 পয়সা", as amounts are written in words on the bills. */
+export function takaPaisa(amount: number): string {
+  const { rupees, paise } = splitRupees(amount);
+  return `${inr(rupees, 0)} টাকা ${paise} পয়সা`;
 }

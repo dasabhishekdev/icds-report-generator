@@ -6,8 +6,9 @@ import { STOCK_LABEL, STOCK_LABEL_EN, dayLabel, holidayText, mealLabel, periodLa
 import { addr, blankZero, colLetter, S, SheetBuilder, zebra, type SheetModel } from './sheet';
 import { REPORT_TITLES } from './titles';
 
-/** First column (1-based) of each stock item's receipt / consumption / balance triple. */
-const STOCK_COL: Record<StockItemKey, number> = { chatu: 18, rice: 21, dal: 24, oil: 27, salt: 30 };
+/** First column (1-based) of each item's receipt / consumption / balance triple. */
+const CHATU_COL = 18;
+const STOCK_COL: Record<StockItemKey, number> = { rice: 21, dal: 24, oil: 27, salt: 30 };
 const BN_DIGITS = '০১২৩৪৫৬৭৮৯';
 
 export function buildStockRegister(summary: MonthSummary, settings: Settings): SheetModel {
@@ -32,12 +33,14 @@ export function buildStockRegister(summary: MonthSummary, settings: Settings): S
     'পরিকল্পিত রেশন সংখ্যা (Beneficiary Attendance Breakdown)',
     S.header,
   );
+  // Chatu is bought with the voucher, so it has consumption but no receipts or balance.
+  b.mergeSet(`${colLetter(CHATU_COL)}3:${colLetter(CHATU_COL + 2)}3`, 'খাদ্য সামগ্রী-২: ছাতু (Chatu) [ক্রয় - Bought]', S.header);
   STOCK_ITEM_KEYS.forEach((item, i) => {
     const col = STOCK_COL[item];
     const range = `${colLetter(col)}3:${colLetter(col + 2)}3`;
     b.mergeSet(
       range,
-      `খাদ্য সামগ্রী-${BN_DIGITS[i + 2]}: ${STOCK_LABEL[item]} (${STOCK_LABEL_EN[item]}) [OB: ${trimNum(summary.opening[item])}]`,
+      `খাদ্য সামগ্রী-${BN_DIGITS[i + 3]}: ${STOCK_LABEL[item]} (${STOCK_LABEL_EN[item]}) [OB: ${trimNum(summary.opening[item])}]`,
       S.header,
     );
   });
@@ -49,9 +52,8 @@ export function buildStockRegister(summary: MonthSummary, settings: Settings): S
     'মোট মা', 'মোট শিশু', 'সর্বমোট',
   ];
   sub.forEach((h, i) => b.set(addr(4, i + 1), h, S.subHeader));
-  for (const item of STOCK_ITEM_KEYS) {
-    const col = STOCK_COL[item];
-    const name = STOCK_LABEL[item];
+  const groups: [number, string][] = [[CHATU_COL, 'ছাতু'], ...STOCK_ITEM_KEYS.map((item): [number, string] => [STOCK_COL[item], STOCK_LABEL[item]])];
+  for (const [col, name] of groups) {
     b.set(addr(4, col), `প্রাপ্তি (${name})`, S.subHeader)
       .set(addr(4, col + 1), `খরচ (${name})`, S.subHeader)
       .set(addr(4, col + 2), `মজুত (${name})`, S.subHeader);
@@ -59,7 +61,7 @@ export function buildStockRegister(summary: MonthSummary, settings: Settings): S
   b.height(4, 28);
 
   const first = 5;
-  const lastBalance: Record<StockItemKey, string> = { chatu: '', rice: '', dal: '', oil: '', salt: '' };
+  const lastBalance: Record<StockItemKey, string> = { rice: '', dal: '', oil: '', salt: '' };
   summary.rows.forEach((row, i) => {
     const r = first + i;
     b.height(r, 18);
@@ -85,6 +87,9 @@ export function buildStockRegister(summary: MonthSummary, settings: Settings): S
       for (let col = 3; col <= 17; col++) b.set(addr(r, col), null, cell);
     }
 
+    b.set(addr(r, CHATU_COL), null, qty)
+      .set(addr(r, CHATU_COL + 1), blankZero(row.ration.total.chatu), qty)
+      .set(addr(r, CHATU_COL + 2), null, qty);
     for (const item of STOCK_ITEM_KEYS) {
       const col = STOCK_COL[item];
       const recv = addr(r, col);
@@ -116,6 +121,9 @@ export function buildStockRegister(summary: MonthSummary, settings: Settings): S
   ];
   countTotals.forEach((v, i) => b.set(addr(t, 3 + i), v, S.total, sum(3 + i)));
   const total = { ...S.total, numFmt: '#,##0.##' };
+  b.set(addr(t, CHATU_COL), null, total)
+    .set(addr(t, CHATU_COL + 1), summary.totals.ration.total.chatu, total, sum(CHATU_COL + 1))
+    .set(addr(t, CHATU_COL + 2), null, total);
   for (const item of STOCK_ITEM_KEYS) {
     const col = STOCK_COL[item];
     const received = summary.rows.reduce((s, row) => s + row.receipts[item], 0);

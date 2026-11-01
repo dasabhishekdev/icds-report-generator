@@ -21,6 +21,7 @@ function formatValue(v: string | number | null, style: CellStyle): string {
   if (typeof v === 'number' && style.numFmt === '#,##0.00') {
     return v.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
+  if (typeof v === 'number' && style.numFmt === '0') return String(Math.round(v));
   if (typeof v === 'number') return v.toLocaleString('en-IN', { maximumFractionDigits: 2 });
   return v;
 }

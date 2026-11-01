@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import {
   STATE_HOLIDAY_MODES,
+  isStockItem,
   type BackupFile,
   type Beneficiary,
   type Category,
@@ -87,25 +88,37 @@ export const daySchema = z.strictObject({
   submittedAt: timestamp.optional(),
 }) satisfies z.ZodType<DayRecord>;
 
-export const receiptSchema = z.strictObject({
+const receiptFields = {
   id: idSchema,
   date: isoDateSchema,
-  item: z.enum(['chatu', 'rice', 'dal', 'oil', 'salt']),
   quantity: amount,
   challanNo: text(50).optional(),
   note: text(300).optional(),
+};
+
+export const receiptSchema = z.strictObject({
+  ...receiptFields,
+  item: z.enum(['rice', 'dal', 'oil', 'salt']),
 }) satisfies z.ZodType<StockReceipt>;
+
+/** Chatu is bought, not received: chatu receipts in older backups are accepted and dropped. */
+const backupReceiptsSchema = z
+  .array(z.strictObject({ ...receiptFields, item: z.enum(['chatu', 'rice', 'dal', 'oil', 'salt']) }))
+  .max(10_000)
+  .transform((list) => list.filter((r): r is StockReceipt => isStockItem(r.item)));
 
 export const monthMetaSchema = z.strictObject({
   month: monthSchema,
   openingStock: z
     .strictObject({
-      chatu: amount.optional(),
       rice: amount.optional(),
       dal: amount.optional(),
       oil: amount.optional(),
       salt: amount.optional(),
+      /** Accepted from older clients and backups, then dropped. */
+      chatu: amount.optional(),
     })
+    .transform(({ chatu: _chatu, ...stock }) => stock)
     .optional(),
   fuelOverrides: z
     .array(z.strictObject({ fuelItemId: idSchema, quantity: amount.optional(), rate: amount.optional() }))
@@ -142,10 +155,12 @@ const settingsFields = {
       }),
     )
     .max(50),
+  fuelPerCookingDay: amount.optional(),
   holidays: z.array(z.strictObject({ date: isoDateSchema, name: text(120).min(1) })).max(400),
   stateHolidays: z.enum(STATE_HOLIDAY_MODES).optional(),
   openOnStateHolidays: z.array(isoDateSchema).max(2000).optional(),
   paperSize: z.enum(['A4', 'A3']).optional(),
+  snpInPaise: z.boolean().optional(),
 };
 
 export const settingsSchema = z.strictObject({
@@ -163,7 +178,7 @@ export const backupSchema = z.strictObject({
   categories: z.array(categorySchema).max(100),
   beneficiaries: z.array(beneficiarySchema).max(10_000),
   days: z.array(daySchema).max(10_000),
-  receipts: z.array(receiptSchema).max(10_000),
+  receipts: backupReceiptsSchema,
   monthMetas: z.array(monthMetaSchema).max(1_000),
 }) satisfies z.ZodType<BackupFile>;
 

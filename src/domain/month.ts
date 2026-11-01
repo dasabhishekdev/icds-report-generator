@@ -2,6 +2,7 @@ import {
   ITEM_KEYS,
   MEAL_TYPES,
   STOCK_ITEM_KEYS,
+  isStockItem,
   type Beneficiary,
   type Category,
   type DayRecord,
@@ -84,7 +85,7 @@ export function suggestMeal(date: string, days: readonly DayRecord[]): MealType 
 }
 
 export type StockQuantities = Record<StockItemKey, number>;
-const zeroStock = (): StockQuantities => ({ chatu: 0, rice: 0, dal: 0, oil: 0, salt: 0 });
+const zeroStock = (): StockQuantities => ({ rice: 0, dal: 0, oil: 0, salt: 0 });
 
 export interface DayRow {
   date: string;
@@ -97,6 +98,8 @@ export interface DayRow {
   counts: DayCounts;
   ration: Ration;
   costs: DayCosts;
+  /** Fuel & spice amount for the day (Rs); zero unless a meal was cooked. */
+  fuel: number;
   receipts: StockQuantities;
   consumption: StockQuantities;
   closing: StockQuantities;
@@ -138,6 +141,9 @@ export interface MonthSummary {
   enrolled: { pregnant: number; nursing: number; childUnder3: number; child3to6: number };
   beneficiaryDays: number;
   fuel: FuelLine[];
+  /** Rs per cooking day × cooking days, shown row by row on the fuel register. */
+  fuelDaily: { rate: number; days: number; amount: number };
+  /** Fuel item lines plus the daily amount. */
   fuelTotal: number;
 }
 
@@ -209,9 +215,10 @@ function buildRows(dates: readonly string[], ctx: Context): DayRow[] {
       ? countPresent(record.presentIds, date, ctx.beneficiaryMap, ctx.categories, settings.nursingMonths)
       : emptyCounts();
     const meal = working ? record.meal : undefined;
+    const served = working && counts.total > 0;
     const ration = dayRation(meal ?? 'khichuri', meal ? counts.byCategory : {}, ctx.categories);
     const dayReceipts = zeroStock();
-    for (const r of receipts) if (r.date === date) dayReceipts[r.item] += r.quantity;
+    for (const r of receipts) if (r.date === date && isStockItem(r.item)) dayReceipts[r.item] += r.quantity;
     const consumption = zeroStock();
     for (const item of STOCK_ITEM_KEYS) consumption[item] = ration.total[item];
     return {
@@ -219,11 +226,12 @@ function buildRows(dates: readonly string[], ctx: Context): DayRow[] {
       day: parseIso(date).d,
       status,
       meal,
-      served: working && counts.total > 0,
+      served,
       submitted: submissionState(record) === 'submitted',
       counts,
       ration,
       costs: dayCosts(ration, settings.rates),
+      fuel: served ? (settings.fuelPerCookingDay ?? 0) : 0,
       receipts: dayReceipts,
       consumption,
       closing: zeroStock(),
@@ -351,6 +359,8 @@ export function buildPeriodSummary(from: string, to: string, data: AppData): Mon
   };
   const purchaseTotal = round2(purchase.egg.cost + purchase.veg.cost + purchase.potato.cost + purchase.chatu.cost);
   const fuel = fuelLines(period.fullMonth ? month : null, totals.counts.total, ctx);
+  const fuelRate = data.settings.fuelPerCookingDay ?? 0;
+  const fuelDaily = { rate: fuelRate, days: served.length, amount: round2(fuelRate * served.length) };
 
   return {
     month,
@@ -365,10 +375,13 @@ export function buildPeriodSummary(from: string, to: string, data: AppData): Mon
     purchaseTotal,
     opening,
     closing,
-    receipts: data.receipts.filter((r) => r.date >= from && r.date <= to).sort((a, b) => (a.date < b.date ? -1 : 1)),
+    receipts: data.receipts
+      .filter((r) => r.date >= from && r.date <= to && isStockItem(r.item))
+      .sort((a, b) => (a.date < b.date ? -1 : 1)),
     enrolled: enrolledAt(to, ctx),
     beneficiaryDays: totals.counts.total,
     fuel,
-    fuelTotal: round2(fuel.reduce((s, f) => s + f.amount, 0)),
+    fuelDaily,
+    fuelTotal: round2(fuel.reduce((s, f) => s + f.amount, 0) + fuelDaily.amount),
   };
 }
