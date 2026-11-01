@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
 import { Baby, Plus, Search, TriangleAlert, UserRound } from 'lucide-react';
-import type { Beneficiary } from '../db/schema';
-import { ageInMonths, formatAge, todayIso } from '../domain/dates';
+import type { Beneficiary, MotherBeneficiary } from '../db/schema';
+import { ageInMonths, formatAge, formatMonths, monthLabel, monthOf, todayIso } from '../domain/dates';
 import { childrenWithoutDob, isEnrolledOn, resolveCategory } from '../domain/eligibility';
+import { babyAge, pregnancyMonth } from '../domain/registerAge';
 import { useApp } from '../state/AppDataContext';
 import { Button, Modal, Segmented, TextInput } from '../components/ui';
 import { BeneficiaryForm } from './BeneficiaryForm';
@@ -36,6 +37,19 @@ export function BeneficiariesPage() {
         return rank(x) - rank(y) || x.b.name.localeCompare(y.b.name);
       });
   }, [beneficiaries, filter, query, showMissingOnly, categories, settings.nursingMonths, today]);
+
+  const month = monthOf(today);
+  const motherDetail = (m: MotherBeneficiary) => {
+    if (m.deliveryDate) {
+      const baby = formatMonths(Math.max(0, babyAge(m.deliveryDate, month)), lang);
+      return `${t('nursing')} · ${lang === 'bn' ? `শিশু ${baby}` : `baby ${baby}`}`;
+    }
+    if (!m.expectedDeliveryDate) return t('pregnant');
+    const months = pregnancyMonth(m.expectedDeliveryDate, month);
+    return months >= 1 && months <= 9
+      ? `${t('pregnant')} · ${formatMonths(months, lang)}`
+      : `${t('pregnant')} · ${t('edd')}: ${monthLabel(m.expectedDeliveryDate.slice(0, 7), lang)}`;
+  };
 
   const badge = (r: (typeof rows)[number]) => {
     if (r.b.exitedOn && today >= r.b.exitedOn) return { text: t('exited'), cls: 'bg-slate-200 text-slate-600' };
@@ -100,11 +114,7 @@ export function BeneficiariesPage() {
             const detail =
               b.kind === 'child'
                 ? `${b.gender === 'M' ? t('boy') : t('girl')} · ${b.dob ? formatAge(ageInMonths(b.dob, today), lang) : t('dobMissing')}${b.guardianName ? ` · ${b.guardianName}` : ''}`
-                : b.deliveryDate
-                  ? `${t('deliveryDate')}: ${b.deliveryDate}`
-                  : b.expectedDeliveryDate
-                    ? `${t('edd')}: ${b.expectedDeliveryDate}`
-                    : b.husbandName ?? '';
+                : [motherDetail(b), b.husbandName].filter(Boolean).join(' · ');
             return (
               <li key={b.id}>
                 <button
