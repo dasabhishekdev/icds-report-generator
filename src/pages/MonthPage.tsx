@@ -254,7 +254,7 @@ function ReceiptsCard({ summary }: { summary: MonthSummary }) {
         <Field label={t('item')}>
           <Select value={item} onChange={setItem} options={STOCK_ITEM_KEYS.map((k) => ({ value: k, label: label(k) }))} />
         </Field>
-        <Field label={t('quantityKg')}>
+        <Field label={t('quantityKg')} hint={kg ? `= ${formatQty(item, Math.round(kg * 1000), t)}` : undefined}>
           <NumberInput value={kg} onChange={setKg} />
         </Field>
         <Field label={t('challanNo')}>
@@ -293,7 +293,7 @@ function FuelPanel({ summary }: { summary: MonthSummary }) {
               <span className="text-xs text-slate-500">{t('govSuppliedUsed')}</span>
             </span>
             <span className="shrink-0 font-semibold tabular-nums text-slate-900">
-              {line.quantity} {line.unit}
+              {line.quantity.toLocaleString('en-IN')} {line.unit}
             </span>
           </div>
         ))}

@@ -62,6 +62,7 @@ describe('September 2026 reports', () => {
     expect(v(stock, 'X20')).toBe(30000);
     expect(v(stock, 'R37')).toContain('চালান নং: 1429');
     expect(v(stock, 'R37')).not.toContain('ছাতু');
+    expect(v(stock, 'R37')).toContain('ডাল 30,000 গ্রাম');
   });
 
   it('stock register shows chatu used but no receipts or balance', () => {
@@ -85,12 +86,12 @@ describe('September 2026 reports', () => {
     expect([v(fuel, 'E41'), v(fuel, 'F41')]).toEqual([1186, 65]);
     expect([v(fuel, 'A42'), v(fuel, 'C42'), v(fuel, 'D42'), v(fuel, 'E42')]).toEqual([
       'সি.এস.বি. / চাল / ডাল (CSB / Rice / Dal)',
-      '88.7 Kg',
+      '88,700 গ্রাম',
       'সরকারি সরবরাহ',
       null,
     ]);
-    expect(v(fuel, 'C43')).toBe('2.18 Lit');
-    expect([v(fuel, 'A44'), v(fuel, 'C44')]).toEqual(['লবণ (Salt)', '2.18 Kg']);
+    expect(v(fuel, 'C43')).toBe('2,178 গ্রাম');
+    expect([v(fuel, 'A44'), v(fuel, 'C44')]).toEqual(['লবণ (Salt)', '2,178 গ্রাম']);
     expect([v(fuel, 'A45'), v(fuel, 'E45'), v(fuel, 'F45')]).toEqual(['মোট (Total)', 1186, 65]);
   });
 

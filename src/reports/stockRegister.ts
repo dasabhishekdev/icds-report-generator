@@ -2,7 +2,7 @@ import { STOCK_ITEM_KEYS, type Settings, type StockItemKey } from '../db/schema'
 import { STOCK_AGE_BANDS } from '../domain/calc';
 import { dotted } from '../domain/dates';
 import type { MonthSummary } from '../domain/month';
-import { STOCK_LABEL, STOCK_LABEL_EN, dayLabel, holidayText, mealLabel, periodLabel, periodSlug, stockUnit, trimNum } from './common';
+import { STOCK_LABEL, STOCK_LABEL_EN, dayLabel, holidayText, mealLabel, periodLabel, periodSlug, trimNum } from './common';
 import { addr, blankZero, colLetter, S, SheetBuilder, zebra, type SheetModel } from './sheet';
 import { REPORT_TITLES } from './titles';
 
@@ -159,7 +159,7 @@ function receiptSummary(summary: MonthSummary): string {
   return [...groups.entries()]
     .map(([key, list]) => {
       const [date, challan] = key.split('|');
-      const items = list.map((r) => `${STOCK_LABEL[r.item]} ${trimNum(r.quantity / 1000)} ${stockUnit(r.item)}`).join(', ');
+      const items = list.map((r) => `${STOCK_LABEL[r.item]} ${r.quantity.toLocaleString('en-IN')} গ্রাম`).join(', ');
       return `খাদ্য পাওয়ার তারিখ: ${dotted(date)}${challan ? ` | চালান নং: ${challan}` : ''} | প্রাপ্তি: ${items}`;
     })
     .join('; ');

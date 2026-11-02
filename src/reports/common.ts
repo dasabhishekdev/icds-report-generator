@@ -61,10 +61,6 @@ export const STOCK_LABEL_EN: Record<StockItemKey, string> = {
   salt: 'Salt',
 };
 
-export function stockUnit(item: StockItemKey): string {
-  return item === 'oil' ? 'Lit' : 'Kg';
-}
-
 export const inr = (n: number, digits = 2) =>
   n.toLocaleString('en-IN', { minimumFractionDigits: digits, maximumFractionDigits: digits });
 

@@ -15,10 +15,10 @@ export const ITEM_LABEL: Record<ItemKey, StringKey> = {
 
 export const MEAL_LABEL: Record<MealType, StringKey> = { khichuri: 'khichuri', rice: 'rice' };
 
+/** Quantities stay in grams everywhere, as in the registers (eggs in pieces). */
 export function formatQty(item: ItemKey | StockItemKey, qty: number, t: (k: StringKey) => string): string {
   if (item === 'egg') return `${Number(qty.toFixed(2))} ${t('pcs')}`;
-  if (Math.abs(qty) >= 1000) return `${(qty / 1000).toLocaleString('en-IN', { maximumFractionDigits: 3 })} kg`;
-  return `${Number(qty.toFixed(2))} ${t('grams')}`;
+  return `${qty.toLocaleString('en-IN', { maximumFractionDigits: 2 })} ${t('grams')}`;
 }
 
 /** "September 2026" for a whole month, otherwise "07.09.2026 – 12.09.2026". */

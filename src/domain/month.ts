@@ -123,9 +123,9 @@ export interface FuelLine {
 
 /** Government supplies listed on the printed fuel register, with the stock items they add up. */
 const FUEL_REGISTER_SUPPLIES: { id: string; name: string; unit: string; items: StockItemKey[] }[] = [
-  { id: 'csb', name: 'সি.এস.বি. / চাল / ডাল (CSB / Rice / Dal)', unit: 'Kg', items: ['rice', 'dal'] },
-  { id: 'oil', name: 'স্যাঃ তেল / সঃ তেল (Oil)', unit: 'Lit', items: ['oil'] },
-  { id: 'salt', name: 'লবণ (Salt)', unit: 'Kg', items: ['salt'] },
+  { id: 'csb', name: 'সি.এস.বি. / চাল / ডাল (CSB / Rice / Dal)', unit: 'গ্রাম', items: ['rice', 'dal'] },
+  { id: 'oil', name: 'স্যাঃ তেল / সঃ তেল (Oil)', unit: 'গ্রাম', items: ['oil'] },
+  { id: 'salt', name: 'লবণ (Salt)', unit: 'গ্রাম', items: ['salt'] },
 ];
 
 export interface ReportPeriod {
@@ -335,7 +335,7 @@ function fuelLines(rows: readonly DayRow[], daily: MonthSummary['fuelDaily']): F
       id: supply.id,
       name: supply.name,
       unit: supply.unit,
-      quantity: round2(supply.items.reduce((s, item) => s + used(item), 0) / 1000),
+      quantity: round2(supply.items.reduce((s, item) => s + used(item), 0)),
       rate: 0,
       amount: 0,
       govSupplied: true,

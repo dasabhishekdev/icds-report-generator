@@ -5,7 +5,7 @@ import { inr, periodSlug, trimNum } from './common';
 import { S, SheetBuilder, type SheetModel } from './sheet';
 import { REPORT_TITLES } from './titles';
 
-const perGrams = (g: number) => (g === 1000 ? 'Kg' : `${trimNum(g)} গ্রাম`);
+const perGrams = (g: number) => `${trimNum(g)} গ্রাম`;
 
 export function buildNutritionVoucher(summary: MonthSummary, settings: Settings): SheetModel {
   const c = settings.center;
@@ -65,12 +65,12 @@ export function buildNutritionVoucher(summary: MonthSummary, settings: Settings)
     .set('F11', 'খরচ - টাকা (Cost in Rs.)', S.header)
     .height(11, 24);
 
-  const grams = (g: number) => `গ্রাম (Grams) [${(g / 1000).toFixed(3)} Kg]`;
+  const grams = 'গ্রাম (Grams)';
   const lines = [
     { name: 'ডিম (Eggs)', p: purchase.egg, unit: 'টি (Pcs)', per: 'টি' },
-    { name: 'সবজী (Vegetables)', p: purchase.veg, unit: grams(purchase.veg.quantity), per: perGrams(purchase.veg.per) },
-    { name: 'আলু (Potato)', p: purchase.potato, unit: grams(purchase.potato.quantity), per: perGrams(purchase.potato.per) },
-    { name: 'ছাতু (Chatu / Roasted Gram Flour)', p: purchase.chatu, unit: grams(purchase.chatu.quantity), per: perGrams(purchase.chatu.per) },
+    { name: 'সবজী (Vegetables)', p: purchase.veg, unit: grams, per: perGrams(purchase.veg.per) },
+    { name: 'আলু (Potato)', p: purchase.potato, unit: grams, per: perGrams(purchase.potato.per) },
+    { name: 'ছাতু (Chatu / Roasted Gram Flour)', p: purchase.chatu, unit: grams, per: perGrams(purchase.chatu.per) },
   ];
   lines.forEach((line, i) => {
     const r = 12 + i;
