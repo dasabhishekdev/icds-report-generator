@@ -1,103 +1,136 @@
 # ICDS Report Generator
 
-Multi-user web platform for Anganwadi centres: daily attendance with submit/check-in, automatic ration and cost calculation, and the four monthly ICDS registers (Fuel & Spices, Nutrition Voucher, SNP Veg & Egg, Stock & Consumption) as Excel or PDF on A4/A3.
+[![CI](https://github.com/dasabhishekdev/icds-report-generator/actions/workflows/ci-cd.yml/badge.svg?branch=master)](https://github.com/dasabhishekdev/icds-report-generator/actions/workflows/ci-cd.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-teal.svg)](LICENSE)
 
-Each worker registers their own account. A new account receives the default injection — per-head norms, rates, age categories and fuel items derived from the AWC 547 September 2026 registers — while the centre name, number and worker name are their own. Data is stored per user in MongoDB; every query is scoped to the signed-in user.
+An open-source web app (and Android app) for Anganwadi workers under India's Integrated Child Development Services (ICDS) scheme. Workers record daily attendance; the app calculates rations and costs and produces the four monthly ICDS registers as Excel or PDF:
 
-## Reports
+- Fuel & Spices
+- Nutrition Voucher
+- SNP Veg & Egg
+- Stock & Consumption
 
-Reports → choose **Whole month** or a **Date range** (up to 93 days), A4 or A3, then:
+Live instance: [icds.educoreva.com](https://icds.educoreva.com). The defaults (norms, rates, age categories, the bilingual Bengali/English register layouts and the holiday calendar) follow West Bengal practice, and every value is editable per centre.
 
-- **Generate & save PDF + Excel** — all four registers; the PDF downloads immediately.
-- **This report as PDF** (on the preview) — only the register being previewed.
+<p>
+  <img src="public/showcase/app-attendance.webp" alt="Daily attendance" width="200" />
+  <img src="public/showcase/app-month.webp" alt="Month calendar" width="200" />
+  <img src="public/showcase/app-reports.webp" alt="Reports" width="200" />
+</p>
+<img src="public/showcase/voucher.webp" alt="Generated Nutrition Voucher register" width="620" />
 
-Generation runs on the server from the saved data: the registers are built by the same code as the on-screen preview, printed to a vector PDF by headless Chromium (Puppeteer, Bengali font embedded) and written to Excel with live formulas. Every generation is stored for the user — `<S3_PREFIX>/users/<userId>/<YYYY-MM>/<reportId>/…` in S3, or the `icds-reports-data` volume when `S3_BUCKET` is empty — and listed under **Saved reports** by month with Download, Open / Print and Delete.
+## Features
 
-## Jan Andolan photos and the Poshan portal
+- **Multi-user.** Each worker registers their own account; all data is stored per user in MongoDB and every query is scoped to the signed-in user. A new account starts with default norms, rates, age categories and fuel items; the centre name, number and worker name are the user's own.
+- **Attendance and calculations.** Daily attendance with submit/check-in, automatic ration quantities (rice, dal, oil, salt, eggs, vegetables, potato, chatu) and costs, plus stock and fuel tracking.
+- **Reports.** Choose a whole month or a date range (up to 93 days), A4 or A3. All four registers are generated on the server as a vector PDF (headless Chromium, Bengali font embedded) and as Excel with live formulas, saved per user, and listed under **Saved reports**.
+- **Age categories from date of birth.** Children move between categories the day after completing the boundary age (3–6 years from 3 years + 1 day). A child without a date of birth is flagged until it is added.
+- **Holidays.** West Bengal government holidays are downloaded each year and cached; the current year is built in for offline use. Each centre chooses all holidays, List-I only, or none.
+- **Jan Andolan photos.** Activity photos up to 30 MB are compressed on the phone to under 1.5 MB (the Poshan Abhiyaan portal limit is 2 MB), named consistently, and saved. Portal credentials can be stored encrypted (AES-256-GCM) with copy buttons and direct links to the portal.
+- **Installable.** PWA with offline shell, plus a Trusted Web Activity Android app in `android/`.
+- **Bilingual UI.** Bengali and English.
 
-**Jan Andolan** (sixth tab, also a shortcut on the installed app icon) prepares activity photos for the Poshan Abhiyaan portal, which accepts PNG/JPEG up to 2 MB. Choose any photo up to 30 MB:
+## Tech stack
 
-- It is reduced **on the phone** (Web Worker, `src/lib/compressImage.worker.ts`) to at most 1.5 MB: full resolution at the highest JPEG quality that fits (≥ 0.80), otherwise just enough downscaling, never below 1920 px on the longest side. JPEG/PNG photos already under 1.5 MB are kept unchanged. The search is `chooseEncoding` in `src/lib/imageEncoding.ts`.
-- The result downloads automatically as `AWC_<centre>_JanAndolan_<YYYY-MM-DD>_<HHmm>.jpg` and is saved with a thumbnail at `<S3_PREFIX>/users/<userId>/photos/<YYYY-MM>/<photoId>/…` (or the reports volume). **Saved photos** lists them by month.
-- The portal card shows the worker's portal username and password with copy buttons and opens the portal login or the submission page (`/addactivityparticipation`) in a new tab. The worker fills in the portal form themselves; the app does not automate the portal.
-
-The portal login is entered in Settings → **Poshan portal login** and stored in the `portalLogins` collection, the password AES-256-GCM-encrypted with `PORTAL_SECRET` (64 hex characters; `scripts/deploy.sh` generates it when `.env` has none). Without `PORTAL_SECRET` the card says saving is not available. Changing the key makes saved portal passwords unreadable; workers then enter them again.
-
-## Holidays and age categories
-
-West Bengal publishes its holiday list only as a yearly Finance (Audit) Department PDF, so there is no official API. The server (`server/src/holidays/`) downloads each year from a keyless iCal transcription of the notification (List-I and List-II), falls back to the India Calendar API (List-I only), caches it in the `holidayCalendars` collection, and re-checks this and next year every few hours — a new year appears automatically once it is published. The 2026 list is built in for offline use. In Settings each centre chooses all govt holidays, List-I only, or off, and can mark any state holiday "Not a holiday". Set `HOLIDAY_SYNC=false` for servers without internet.
-
-Children move between age categories from their date of birth, the day after completing the boundary age (3–6 years from 3 years + 1 day). A child without a date of birth has no category: the list, the form and the attendance page warn until it is added.
-
-## Architecture
-
-| Part | Where | Notes |
+| Part | Where | Stack |
 |------|-------|-------|
-| SPA (React + Vite + Tailwind, PWA) | `src/` | Calculation engine and report builders run in the browser |
-| API (Fastify + MongoDB driver) | `server/` | Cookie sessions, scrypt passwords, strict zod validation, per-user collections |
-| Report service | `server/src/reports/` | Puppeteer PDF (`pdf.ts`), print document (`document.ts`), S3/disk storage (`storage.ts`), routes |
-| Containers | `Dockerfile`, `docker-compose.yml` | `icds-web` (nginx, joins network `web`), `icds-api` and `icds-mongo` on private `icds-internal` |
+| Web app | `src/` | React 19, Vite, Tailwind CSS 4, PWA. The calculation engine and report builders run in the browser for the live preview. |
+| API | `server/` | Fastify 5, MongoDB driver, zod validation, cookie sessions, scrypt password hashing |
+| Report service | `server/src/reports/` | Puppeteer PDF, ExcelJS, S3 or disk storage |
+| Containers | `Dockerfile`, `docker-compose.yml` | nginx (`icds-web`), Node API (`icds-api`), MongoDB 7 (`icds-mongo`) |
+| Android | `android/` | Bubblewrap Trusted Web Activity |
 
-Public routing for `icds.educoreva.com` lives in the hosting repo (`nginx/conf.d/icds.conf`) and points at `icds-web:8080`, which serves the app and proxies `/api` to the API.
+## Getting started
 
-## Develop
+Requirements: Node.js 22+, Docker (for MongoDB), and Chrome or Chromium for PDF generation.
 
 ```bash
+git clone https://github.com/dasabhishekdev/icds-report-generator.git
+cd icds-report-generator
 npm ci
+
+# MongoDB for development
 docker run -d --name icds-dev-mongo -p 127.0.0.1:27017:27017 mongo:7
-MONGO_URL=mongodb://127.0.0.1:27017/icds COOKIE_SECURE=false PORTAL_SECRET=$(openssl rand -hex 32) npm run dev:api   # API on :4000
-npm run dev                                                                    # app on :5173, proxies /api
-MONGO_URL=mongodb://127.0.0.1:27017 npm test   # engine/report tests + API tests (API tests skip without MONGO_URL;
-                                               # PDF tests use local Chrome/Chromium or CHROME_PATH;
-                                               # S3 tests run only with S3_TEST_ENDPOINT, e.g. adobe/s3mock)
-npm run build                                  # dist/ (app) and dist-server/index.cjs (API bundle)
+
+# API on http://localhost:4000
+MONGO_URL=mongodb://127.0.0.1:27017/icds COOKIE_SECURE=false PORTAL_SECRET=$(openssl rand -hex 32) npm run dev:api
+
+# Web app on http://localhost:5173 (proxies /api to the API)
+npm run dev
 ```
 
-## Containers
+Open http://localhost:5173 and register an account.
+
+### Run the full stack in Docker
 
 ```bash
-cp .env.example .env            # set MONGO_ROOT_PASSWORD (hex) and COOKIE_SECURE=false for http://localhost
-docker network create web       # only if the hosting router is not running locally
+cp .env.example .env             # set MONGO_ROOT_PASSWORD to a long random hex string
+docker network create web        # once; the web container joins this network
 docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
 # → http://localhost:8084
 ```
 
-## CI/CD
+### Configuration
 
-`.github/workflows/ci-cd.yml`:
+All settings are environment variables; `.env.example` documents each one.
 
-The pipeline runs only for `master`:
+| Variable | Purpose |
+|----------|---------|
+| `MONGO_ROOT_USER`, `MONGO_ROOT_PASSWORD` | MongoDB credentials for the Docker stack (password must be hex) |
+| `COOKIE_SECURE` | `true` in production (HTTPS required); `false` only for plain `http://localhost` |
+| `ALLOW_REGISTRATION` | `false` stops new sign-ups |
+| `HOLIDAY_SYNC` | `false` for servers without outbound internet; uses cached/built-in holiday lists |
+| `PORTAL_SECRET` | 64 hex characters (`openssl rand -hex 32`) encrypting saved portal passwords; without it, saving portal logins is disabled |
+| `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_ENDPOINT`, `S3_FORCE_PATH_STYLE`, `S3_PREFIX` | Report and photo storage. Leave `S3_BUCKET` empty to store files in a Docker volume instead. |
 
-- **Pull requests to `master`** — install, typecheck, unit + API + PDF tests against a MongoDB service, build, then a full container-stack smoke test (health checks, a real registration and a generated report through `icds-web`).
-- **Push to `master`** (or a manual run on `master`) — the same verification, then deploy to production: `scripts/ci-deploy.sh` rsyncs the repo to the VPS and runs `scripts/deploy.sh`, which builds both images, waits for `icds-web`/`icds-api`/`icds-mongo` to be healthy, smoke-tests through network `web`, and rolls back both images if verification fails. MongoDB data persists in the `icds-mongo-data` volume.
-
-### One-time setup
-
-GitHub → Settings → Secrets and variables → Actions:
-
-| Kind | Name | Value |
-|------|------|-------|
-| Secret | `PROD_SSH_HOST` | VPS IP |
-| Secret | `PROD_SSH_USER` | `deploy` |
-| Secret | `PROD_SSH_PRIVATE_KEY` | Deploy SSH private key |
-| Secret | `PROD_SSH_PASSPHRASE` | Key passphrase, if any |
-| Secret | `ICDS_APP_DIR` | Optional, defaults to `$HOME/icds-report-generator` |
-| Variable | `PROD_SSH_KNOWN_HOSTS` | Verified `known_hosts` line for the VPS |
-
-`ICDS_APP_DIR` is intentionally not `PROD_APP_DIR`: the upload uses `rsync --delete`, so it must never point at another app's directory. The VPS-only `.env` and `backups/` are excluded from the upload and therefore never deleted.
-
-VPS: the `deploy` user needs Docker, OpenSSL and the hosting router running (`~/hosting`, which creates network `web`). On first deploy `scripts/deploy.sh` creates `.env` with a random MongoDB password; keep that file safe — it is the only copy.
-
-DNS (Cloudflare, zone `educoreva.com`): `A icds → VPS IP`, proxied — same Flexible setup as `abhishek-das.educoreva.com`. Session cookies are `Secure`, so the site must be reached over HTTPS (Cloudflare provides it).
-
-### Operations
+## Testing and building
 
 ```bash
-cd ~/icds-report-generator
-bash scripts/deploy.sh          # manual deploy
-bash scripts/backup-mongo.sh    # gzip dump into backups/, keeps 30 days (schedule with cron)
+npm run typecheck
+MONGO_URL=mongodb://127.0.0.1:27017 npm test
+npm run build                    # dist/ (web app) and dist-server/index.cjs (API bundle)
 ```
 
-Set `ALLOW_REGISTRATION=false` in `.env` and redeploy to stop new sign-ups.
+- API tests are skipped without `MONGO_URL`.
+- PDF tests use a local Chrome/Chromium, or the browser at `CHROME_PATH`.
+- S3 tests run only with `S3_TEST_ENDPOINT` set (for example, against `adobe/s3mock`).
 
-Report storage: set `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID` and `S3_SECRET_ACCESS_KEY` in `.env` (plus `S3_ENDPOINT` / `S3_FORCE_PATH_STYLE=true` for S3-compatible services such as Cloudflare R2) and redeploy. The IAM user only needs `s3:PutObject`, `s3:GetObject` and `s3:DeleteObject` on `arn:aws:s3:::<bucket>/<S3_PREFIX>/*`. Without `S3_BUCKET`, reports are kept in the `icds-reports-data` volume.
+## Project structure
+
+```text
+src/
+  domain/       calculation engine: months, eligibility, age bands, holidays
+  reports/      register builders shared by the preview and the server (HTML, Excel)
+  pages/        screens (attendance, month, beneficiaries, reports, settings, …)
+  i18n/         Bengali and English strings
+  lib/          image compression worker, downloads, geolocation
+server/
+  src/          Fastify app, auth, data routes, holidays, photos, portal logins, reports
+  test/         API, report, holiday and photo tests
+android/        Trusted Web Activity wrapper
+deploy/nginx/   nginx config for the web container
+scripts/        deploy, backup and Android publish scripts
+docs/           deployment guide and design notes
+```
+
+## How it works
+
+**Report generation.** The server builds the registers from saved data with the same code as the on-screen preview, prints them to PDF with headless Chromium and writes Excel with live formulas. Each generation is stored at `<S3_PREFIX>/users/<userId>/<YYYY-MM>/<reportId>/…` in S3, or in the `icds-reports-data` volume when `S3_BUCKET` is empty.
+
+**Holidays.** West Bengal publishes its holiday list only as a yearly Finance (Audit) Department PDF, so there is no official API. The server (`server/src/holidays/`) downloads each year from a keyless iCal transcription of the notification (List-I and List-II), falls back to the India Calendar API (List-I only), caches it in the `holidayCalendars` collection, and re-checks this year and next every few hours. Centres can mark any state holiday as "Not a holiday".
+
+**Photo compression.** A Web Worker (`src/lib/compressImage.worker.ts`) keeps full resolution at the highest JPEG quality that fits under 1.5 MB (at least 0.80), otherwise downscales just enough, never below 1920 px on the longest side. JPEG/PNG files already under 1.5 MB are kept unchanged. The search is `chooseEncoding` in `src/lib/imageEncoding.ts`. The app never automates the Poshan portal; the worker submits the form themselves.
+
+**Portal passwords.** Stored in the `portalLogins` collection, encrypted with AES-256-GCM using `PORTAL_SECRET`. Changing the key makes saved passwords unreadable, and workers have to enter them again.
+
+## Deployment
+
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the production container layout, CI/CD, backups, S3 storage and the Android app.
+
+## Contributing
+
+Contributions are welcome: bug reports, register layouts for other states, translations, and code. Please read [CONTRIBUTING.md](CONTRIBUTING.md) and follow the [Code of Conduct](CODE_OF_CONDUCT.md). To report a security issue, see [SECURITY.md](SECURITY.md) instead of opening a public issue.
+
+## License
+
+[MIT](LICENSE) © 2026 Abhishek Das (Educoreva)

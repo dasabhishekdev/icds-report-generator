@@ -2,6 +2,31 @@
   "name": "icds-report-generator",
   "private": true,
   "version": "0.1.0",
+  "description": "Daily attendance, ration calculation and the monthly ICDS registers (Excel and PDF) for Anganwadi centres.",
+  "license": "MIT",
+  "author": "Abhishek Das (Educoreva) <abhishekdas_dev@outlook.com>",
+  "homepage": "https://icds.educoreva.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dasabhishekdev/icds-report-generator.git"
+  },
+  "bugs": {
+    "url": "https://github.com/dasabhishekdev/icds-report-generator/issues"
+  },
+  "keywords": [
+    "icds",
+    "anganwadi",
+    "poshan",
+    "west-bengal",
+    "reports",
+    "pwa",
+    "react",
+    "fastify",
+    "mongodb"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",

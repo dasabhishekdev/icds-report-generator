@@ -1,0 +1,22 @@
+name: Feature request
+description: Suggest a new feature, register or state-specific format
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Describe the task Anganwadi workers or supervisors are trying to get done.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Sample registers or references
+      description: For a new register or state format, attach a blank template or a sample with personal data removed.

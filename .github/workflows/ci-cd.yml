@@ -1,6 +1,6 @@
 name: CI/CD
 
-# Only master: verify, then deploy to production.
+# Only master: verify, then deploy to production (upstream repository only).
 on:
   push:
     branches: [master]
@@ -90,7 +90,8 @@ jobs:
   deploy:
     name: Deploy to VPS
     needs: verify
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+    # Forks run the verify job only; production deploys come from the upstream repository.
+    if: github.repository == 'dasabhishekdev/icds-report-generator' && github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment:

@@ -47,13 +47,13 @@ export function emptyCenter(): CenterInfo {
 export const SAMPLE_CENTER: CenterInfo = {
   name: 'Balta Tangakure',
   number: '547',
-  code: '19337201026',
+  code: '00000000000',
   gramPanchayat: 'Palla',
   project: 'বনগাঁ গ্রামীণ',
   district: 'উত্তর ২৪ পরগণা',
-  workerName: 'Swapna Das Sikdar',
-  vegShopkeeper: 'অমিত বিশ্বাস (Amit Biswas)',
-  fuelShopkeeper: 'রমেন বিশ্বাস (Ramen Biswas)',
+  workerName: 'Sample Worker',
+  vegShopkeeper: 'সবজি দোকানদার (Veg Shopkeeper)',
+  fuelShopkeeper: 'জ্বালানি দোকানদার (Fuel Shopkeeper)',
 };
 
 /** Defaults every new account starts with; only the centre details are the user's own. */
