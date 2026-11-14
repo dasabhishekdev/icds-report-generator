@@ -25,6 +25,8 @@ services:
       target: web
       args:
         GIT_SHA: ${GIT_SHA:-unknown}
+    environment:
+      TZ: Asia/Kolkata
     expose:
       - "8080"
     tmpfs:
@@ -51,6 +53,7 @@ services:
       args:
         GIT_SHA: ${GIT_SHA:-unknown}
     environment:
+      TZ: Asia/Kolkata
       MONGO_URL: mongodb://${MONGO_ROOT_USER:-icds}:${MONGO_ROOT_PASSWORD:?Set MONGO_ROOT_PASSWORD in .env}@icds-mongo:27017/icds?authSource=admin
       COOKIE_SECURE: ${COOKIE_SECURE:-true}
       ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-true}
@@ -85,6 +88,7 @@ services:
     image: mongo:7
     command: ["--wiredTigerCacheSizeGB", "0.25"]
     environment:
+      TZ: Asia/Kolkata
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-icds}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?Set MONGO_ROOT_PASSWORD in .env}
     volumes:
